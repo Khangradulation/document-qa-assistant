@@ -1,0 +1,7 @@
+{
+  "demo": true,
+  "apiUrl": "",
+  "region": "us-east-1",
+  "userPoolId": "",
+  "clientId": ""
+}

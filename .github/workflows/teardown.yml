@@ -1,0 +1,66 @@
+name: Teardown dev (DESTROYS ALL DEV DATA)
+
+# Manual only. Deletes every resource the app created (buckets with their PDFs, vectors,
+# records, users). It does NOT touch infra/bootstrap (state bucket, OIDC, roles).
+# Protected by: main-only, a typed confirmation, and a SEPARATE GitHub Environment
+# ("dev-teardown") that should have its own required reviewers.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type destroy-dev to confirm"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev # never overlap with a deployment
+  cancel-in-progress: false
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_VAR_region: ${{ vars.AWS_REGION }}
+  TF_VAR_generation_model_id: ${{ vars.GENERATION_MODEL_ID }}
+  TF_VAR_permissions_boundary_arn: ${{ vars.PERMISSIONS_BOUNDARY_ARN }}
+
+jobs:
+  destroy:
+    if: inputs.confirm == 'destroy-dev' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: dev-teardown
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - run: python scripts/build_lambda.py # the configuration reads the zip's hash
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.17.1"
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gha-teardown-${{ github.run_id }}
+      - name: terraform destroy
+        working-directory: infra
+        env:
+          STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          REGION: ${{ vars.AWS_REGION }}
+        run: |
+          terraform init -input=false -backend-config="bucket=$STATE_BUCKET" -backend-config="region=$REGION"
+          # Non-empty buckets only delete if force_destroy is already true IN STATE,
+          # so flip it first, then destroy.
+          terraform apply -auto-approve -input=false -lock-timeout=5m -var force_destroy=true
+          terraform destroy -auto-approve -input=false -lock-timeout=5m -var force_destroy=true
+      - name: Summary
+        run: echo "### Dev environment destroyed. Bootstrap resources (state bucket, OIDC, roles) remain." >> "$GITHUB_STEP_SUMMARY"

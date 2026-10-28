@@ -1,0 +1,29 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Terraform: never commit state, plans, or local overrides
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan*
+*.auto.tfvars
+terraform.tfvars
+crash.log
+
+# Node
+node_modules/
+frontend/dist/
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+*.pem
+.venv-tools/

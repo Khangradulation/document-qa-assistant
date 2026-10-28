@@ -1,0 +1,119 @@
+name: CI
+
+# Runs on every pull request and on pushes to main. Also callable from deploy.yml,
+# so a deployment can never skip these checks. Needs NO AWS credentials.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+# Default: read-only. No job here needs more.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Actions are pinned to full commit SHAs (a tag can be moved; a SHA cannot).
+# Version in the trailing comment. Dependabot keeps them current.
+jobs:
+  backend:
+    name: Backend (ruff, mypy, pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.lock.txt
+      - run: pip install -r backend/requirements-dev.lock.txt
+      - run: ruff check backend scripts
+      - run: ruff format --check backend scripts
+      - run: mypy backend/src
+      - run: pytest # integration tests (live AWS) are excluded by default
+
+  frontend:
+    name: Frontend (eslint, tsc, vitest, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=high
+
+  terraform:
+    name: Terraform (fmt, validate)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      # validate reads the Lambda zip's hash, so build it first (same script deploy uses).
+      - run: python scripts/build_lambda.py
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.17.1"
+          terraform_wrapper: false
+      - run: terraform -chdir=infra fmt -check -recursive
+      - run: terraform -chdir=infra init -backend=false -input=false
+      - run: terraform -chdir=infra validate
+      - run: terraform -chdir=infra/bootstrap init -backend=false -input=false
+      - run: terraform -chdir=infra/bootstrap validate
+
+  security:
+    name: Security scans (checkov, pip-audit, actionlint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - run: pip install -r tools/requirements.lock.txt
+      # Terraform misconfiguration scan (every skip is justified inline in the .tf files)
+      - run: checkov -d infra --framework terraform --quiet --compact
+      # Known-vulnerable Python dependencies (the packages that ship in the Lambda zip)
+      - run: pip-audit -r backend/requirements.lock.txt
+      # Lints the workflow files themselves (syntax, expressions, script injection)
+      - run: actionlint
+
+  # One stable name to mark as the single "required status check" in branch protection.
+  ci-ok:
+    name: CI passed
+    if: always()
+    needs: [backend, frontend, terraform, security]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          for r in $RESULTS; do
+            [ "$r" = "success" ] || { echo "A required job did not succeed"; exit 1; }
+          done

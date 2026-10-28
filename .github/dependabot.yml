@@ -1,0 +1,16 @@
+version: 2
+# Keeps pinned action SHAs, npm packages and Terraform providers current via reviewable PRs.
+# (Python lock files are updated by hand: pip install -U, re-freeze, run the tests.)
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: { interval: weekly }
+  - package-ecosystem: terraform
+    directory: /infra
+    schedule: { interval: weekly }
+  - package-ecosystem: terraform
+    directory: /infra/bootstrap
+    schedule: { interval: weekly }

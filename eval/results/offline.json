@@ -1,0 +1,314 @@
+{
+  "mode": "offline",
+  "settings": {
+    "top_k": 5,
+    "max_distance": 0.9
+  },
+  "rows": [
+    {
+      "id": "q01",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.897,
+      "cited_pages": [
+        1
+      ],
+      "expected_pages": [
+        1
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q02",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.739,
+      "cited_pages": [
+        1
+      ],
+      "expected_pages": [
+        1
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q03",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.768,
+      "cited_pages": [
+        1
+      ],
+      "expected_pages": [
+        1
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q04",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.823,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [
+        2
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q05",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.841,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [
+        2
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q06",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.832,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [
+        2
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q07",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.832,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [
+        2
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q08",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.779,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [
+        2
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q09",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.69,
+      "cited_pages": [
+        3
+      ],
+      "expected_pages": [
+        3
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q10",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.759,
+      "cited_pages": [
+        3
+      ],
+      "expected_pages": [
+        3
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q11",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.856,
+      "cited_pages": [
+        3
+      ],
+      "expected_pages": [
+        3
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q12",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.75,
+      "cited_pages": [
+        3
+      ],
+      "expected_pages": [
+        3
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q13",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.825,
+      "cited_pages": [
+        4
+      ],
+      "expected_pages": [
+        4
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q14",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.835,
+      "cited_pages": [
+        4
+      ],
+      "expected_pages": [
+        4
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q15",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.849,
+      "cited_pages": [
+        4
+      ],
+      "expected_pages": [
+        4
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q16",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.769,
+      "cited_pages": [
+        4
+      ],
+      "expected_pages": [
+        4
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "u01",
+      "answerable": false,
+      "answered": false,
+      "best_distance": 0.968,
+      "cited_pages": [],
+      "expected_pages": [],
+      "correct_refusal": true
+    },
+    {
+      "id": "u02",
+      "answerable": false,
+      "answered": true,
+      "best_distance": 0.866,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [],
+      "correct_refusal": false
+    },
+    {
+      "id": "u03",
+      "answerable": false,
+      "answered": false,
+      "best_distance": 0.903,
+      "cited_pages": [],
+      "expected_pages": [],
+      "correct_refusal": true
+    },
+    {
+      "id": "u04",
+      "answerable": false,
+      "answered": false,
+      "best_distance": 0.97,
+      "cited_pages": [],
+      "expected_pages": [],
+      "correct_refusal": true
+    }
+  ],
+  "summary": {
+    "answerable_n": 16,
+    "unanswerable_n": 4,
+    "hit@1_%": 100.0,
+    "MRR": 1.0,
+    "answered_%": 100.0,
+    "citations_correct_%": 100.0,
+    "evidence_has_facts_%": 100.0,
+    "answer_has_facts_%": 100.0,
+    "correct_refusals_%": 75.0
+  }
+}
