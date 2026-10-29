@@ -62,7 +62,7 @@ Why chunks keep their page number: each stored vector carries metadata
 
 ## Defaults chosen (change any time)
 
-Region us-east-1 · env dev · Python 3.14 · Titan V2 @ 1024 dims · cosine ·
+Region us-east-2 · env dev · Python 3.14 · Titan V2 @ 1024 dims · cosine ·
 top_k 5 · ~800-token chunks, 100 overlap · 10 MB / 200-page limit.
 No compiled dependencies (no pydantic/numpy) so the Lambda zip is portable.
 

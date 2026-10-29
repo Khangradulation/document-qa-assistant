@@ -36,7 +36,7 @@ at all, only non-secret *variables*.
 
    | Variable | Value |
    |---|---|
-   | `AWS_REGION` | e.g. `us-east-1` |
+   | `AWS_REGION` | e.g. `us-east-2` |
    | `TF_STATE_BUCKET` | bootstrap output `state_bucket` |
    | `AWS_PLAN_ROLE_ARN` | bootstrap output `plan_role_arn` |
    | `AWS_DEPLOY_ROLE_ARN` | bootstrap output `deploy_role_arn` |

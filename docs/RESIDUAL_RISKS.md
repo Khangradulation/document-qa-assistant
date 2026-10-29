@@ -27,15 +27,15 @@ touched real AWS, GitHub or a real model.
 5. Default `MAX_DISTANCE` 0.75 was too strict in the offline eval (rejected 15 of 16 real
    questions). Changed to 0.9 (see risk R1: a judgment call, not proof).
 
-## Unproven assumptions: settled only by `RUN_LIVE_TESTS=1 pytest -m integration -s`
+## Assumptions: 1–4 settled on real S3 Vectors (us-east-2); 5 still open. Rerun with `RUN_LIVE_TESTS=1 pytest -m integration -s`
 
 | # | Assumption | Live test | If it is false |
 |---|---|---|---|
-| 1 | `put_vectors` overwrites an existing key | `test_1` | re-ingest would duplicate or error; need delete-then-put |
-| 2 | `$and`/`$eq` filter syntax accepted | `test_2` | **every query fails** or leaks across users: fix before any use |
-| 3 | 6 KB non-filterable `text` metadata round-trips | `test_3` | answers lose their evidence; move chunk text to DynamoDB/S3 |
-| 4 | cosine distance scale (0 = identical) | `test_4` | `MAX_DISTANCE` meaning changes; re-tune |
-| 5 | Titan + a Bedrock text model work end to end | `test_5a/5b` | model access / IAM / ARN problem |
+| 1 | `put_vectors` overwrites an existing key | `test_1` ✅ passed 2026-10-28 | re-ingest would duplicate or error; need delete-then-put |
+| 2 | `$and`/`$eq` filter syntax accepted | `test_2` ✅ passed 2026-10-28 | **every query fails** or leaks across users: fix before any use |
+| 3 | 6 KB non-filterable `text` metadata round-trips | `test_3` ✅ passed 2026-10-28 | answers lose their evidence; move chunk text to DynamoDB/S3 |
+| 4 | cosine distance scale (0 = identical) | `test_4` ✅ observed same=0.0, orthogonal=0.996, opposite=2.0 (2026-10-28) | `MAX_DISTANCE` meaning changes; re-tune |
+| 5 | Titan + a Bedrock text model work end to end | `test_5a/5b` ❌ **not proven**: ThrottlingException; the account's Bedrock quotas were 0 (Titan V2 requests/min, Nova Micro tokens/min), Claude models need an Anthropic use-case form | model access / IAM / ARN problem |
 
 Not tested by any of them: S3 `ObjectCreated` trigger, presigned-URL upload + bucket CORS,
 Cognito sign-in, API Gateway JWT authorizer, CloudFront, alarms, the deploy role's IAM

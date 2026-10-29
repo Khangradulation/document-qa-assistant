@@ -13,7 +13,8 @@ React + TypeScript frontend.
 > | State | What |
 > |---|---|
 > | ✅ **Implemented and verified locally** | all backend code (95 tests), frontend (23 tests, built, and demo mode used in a browser), Terraform (`fmt`, `validate`, Checkov), workflow syntax (actionlint), dependency audits, PDF fuzzing, an offline evaluation |
-> | ⚠️ **Written, never executed** | the six live-AWS tests, the GitHub workflows, `terraform plan/apply`, the bootstrap |
+> | ✅ **Run against real AWS (S3 Vectors only)** | live tests 1–4 passed on 2026-10-28 in `us-east-2`: overwrite, metadata filter, 6 KB text round-trip, cosine distance (0 = identical, ~1 = orthogonal, 2 = opposite) |
+| ⚠️ **Written, never executed** | live Bedrock tests 5a/5b (the account's Bedrock quotas were 0, so they were throttled), the GitHub workflows, `terraform plan/apply`, the bootstrap |
 > | ❌ **Not done** | **no deployment exists.** Nothing has run on real AWS, GitHub Actions, Cognito or any real model. No screenshots of a deployed app exist. |
 >
 > The offline evaluation uses *stand-in* models, so it checks the pipeline and **not** answer
@@ -204,7 +205,7 @@ Other commands: `make tf-check` (needs Terraform + `.venv-tools`: `python3 -m ve
 It creates billable resources (see [Costs](#costs)). Do it only when you are ready.
 
 ### 1. Choose Region and models
-* **Region**: default `us-east-1`. It must support **S3 Vectors**, **Bedrock** (your models),
+* **Region**: default `us-east-2`. It must support **S3 Vectors**, **Bedrock** (your models),
   and Lambda `python3.14`. Check the AWS docs for current availability before choosing another.
 * **Embedding model**: `amazon.titan-embed-text-v2:0`, 1024 dimensions (256/512 also valid).
   Ingestion and queries must use the *same* model and dimension.
@@ -232,7 +233,7 @@ role ARNs, `PERMISSIONS_BOUNDARY_ARN`, `GENERATION_MODEL_ID`, `DEPLOY_ENABLED`),
 ```bash
 make build-lambda
 cp infra/terraform.tfvars.example infra/terraform.tfvars   # git-ignored; set generation_model_id
-terraform -chdir=infra init -backend-config="bucket=<state bucket>" -backend-config="region=us-east-1"
+terraform -chdir=infra init -backend-config="bucket=<state bucket>" -backend-config="region=us-east-2"
 terraform -chdir=infra plan -out=tfplan      # READ IT: look for replace/destroy of the vector index, table, buckets, user pool
 terraform -chdir=infra apply tfplan
 ```
@@ -336,7 +337,8 @@ uploads expire automatically.
 | PDF robustness | fuzz: 300 corruptions + truncation + hostile files | ✅ |
 | Terraform | fmt, validate, Checkov (253 pass, 0 fail) | ✅ static only |
 | Workflows | actionlint + shellcheck | ✅ static only |
-| Live AWS / Bedrock | 6 tests in `backend/tests/integration/` | ⚠️ **skipped, never run** |
+| Live AWS: S3 Vectors | tests 1–4 in `backend/tests/integration/` | ✅ passed once (2026-10-28, `us-east-2`) |
+| Live AWS: Bedrock | tests 5a/5b | ❌ **failed: throttled** (account quota 0 for Titan V2 and the text models tried); not a code result |
 | Deployment smoke tests | script + 13 tests of the script | ⚠️ logic tested, never run on a real deploy |
 
 **Evaluation** (`eval/`): 16 answerable + 4 unanswerable questions over an original 4-page PDF.

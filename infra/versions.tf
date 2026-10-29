@@ -9,7 +9,7 @@ terraform {
   }
 
   # Remote state (created by infra/bootstrap). Partial config: supply the bucket at init:
-  #   terraform init -backend-config="bucket=<state bucket>" -backend-config="region=us-east-1"
+  #   terraform init -backend-config="bucket=<state bucket>" -backend-config="region=us-east-2"
   # use_lockfile = S3-native locking (no DynamoDB lock table needed).
   backend "s3" {
     key          = "document-qa-assistant/dev/terraform.tfstate"

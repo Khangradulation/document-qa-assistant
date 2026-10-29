@@ -24,7 +24,7 @@ def _float(name: str, default: float) -> float:
 @dataclass(frozen=True)
 class Settings:
     # --- Infrastructure names (injected by Terraform) ---
-    region: str = "us-east-1"
+    region: str = "us-east-2"
     docs_bucket: str = ""
     vector_bucket: str = ""
     vector_index: str = ""

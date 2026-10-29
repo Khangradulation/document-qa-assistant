@@ -1,6 +1,6 @@
 """LIVE tests against real AWS. NEVER run by default: they cost a little and need credentials.
 
-    RUN_LIVE_TESTS=1 AWS_REGION=us-east-1 .venv/bin/pytest -m integration -s
+    RUN_LIVE_TESTS=1 AWS_REGION=us-east-2 .venv/bin/pytest -m integration -s
     # plus, to also call Bedrock (embedding + text generation):
     RUN_LIVE_BEDROCK=1 GENERATION_MODEL_ID=<model enabled in your account> ...
 
@@ -40,7 +40,7 @@ needs_bedrock = pytest.mark.skipif(
     os.environ.get("RUN_LIVE_BEDROCK") != "1",
     reason="paid model calls: also set RUN_LIVE_BEDROCK=1",
 )
-REGION = os.environ.get("AWS_REGION", "us-east-1")
+REGION = os.environ.get("AWS_REGION", "us-east-2")
 DIMS = 8
 
 

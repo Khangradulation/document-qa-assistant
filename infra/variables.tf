@@ -1,7 +1,7 @@
 variable "region" {
   type        = string
   description = "AWS Region for everything (S3 Vectors, Bedrock models and Lambda must all be available here)."
-  default     = "us-east-1"
+  default     = "us-east-2"
 }
 
 variable "app_name" {
