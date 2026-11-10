@@ -2,7 +2,7 @@
   "mode": "offline",
   "settings": {
     "top_k": 5,
-    "max_distance": 0.9
+    "max_distance": 1.0
   },
   "rows": [
     {

@@ -49,7 +49,7 @@ class Settings:
     # silently turns every question into "not found", too loose only costs a model call that
     # should refuse. The model + citation check make the real call.
     # Tune with: python eval/run_eval.py --mode live --sweep
-    max_distance: float = 0.9
+    max_distance: float = 1.0
 
     # --- Chunking (approximate tokens; see chunking.py) ---
     chunk_tokens: int = 800

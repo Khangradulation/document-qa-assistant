@@ -5,7 +5,7 @@
 > mechanism. It does **not** measure Titan embeddings or any Bedrock model. Do not quote these
 > numbers as model quality. The sample PDF has only 4 chunks, so retrieval is an easy task.
 
-Settings: `{'top_k': 5, 'max_distance': 0.9}`
+Settings: `{'top_k': 5, 'max_distance': 1.0}`
 
 | metric | value |
 |---|---|

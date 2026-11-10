@@ -46,7 +46,7 @@ Why chunks keep their page number: each stored vector carries metadata
 - Terraform, AWS CLI not installed; no AWS credentials on this machine.
 - Which Bedrock **generation** model is enabled in your account (`GENERATION_MODEL_ID`).
 - Cosine distance semantics and the right `MAX_DISTANCE` threshold: tuned by the
-  eval set once we can call AWS. The default (0.9) is a judgment call (loose on purpose), not a measured value.
+  eval set once we can call AWS. The default (1.0, raised from 0.9 after live q03) is a judgment call (loose on purpose), not a measured value.
 
 ## Phases (status)
 
@@ -83,7 +83,7 @@ Modules in `backend/src/docqa/`: `pdf.py` (validate + per-page text), `chunking.
 1. `put_vectors` overwrites an existing key (our idempotency relies on it).
 2. Filter syntax `{"$and":[{"k":{"$eq":v}}, ...]}` is accepted by `query_vectors`.
 3. The index can declare `text` as a non-filterable metadata key and return it.
-4. Cosine `distance` scale, so `MAX_DISTANCE=0.9` is a guess until tuned (was 0.75; loosened in Phase 7).
+4. Cosine `distance` scale, so `MAX_DISTANCE=1.0` is a guess until tuned (was 0.75; loosened in Phase 7).
 5. `bedrock-runtime` `converse` works with your chosen generation model.
 Unit tests prove our logic; they do NOT prove these five. Phase 7 checks them live.
 

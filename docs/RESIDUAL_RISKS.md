@@ -25,7 +25,9 @@ touched real AWS, GitHub or a real model.
 4. No bound on chunks per document (cost / 300 s timeout). Added `MAX_CHUNKS=1000`, checked
    before any paid embedding call.
 5. Default `MAX_DISTANCE` 0.75 was too strict in the offline eval (rejected 15 of 16 real
-   questions). Changed to 0.9 (see risk R1: a judgment call, not proof).
+   questions). Changed to 0.9, then to 1.0 on 2026-11-10: the live eval's q03 supporting chunk was at
+   distance 0.915, so 0.9 dropped it before the model saw it. Unanswerable questions also have close
+   hits (0.75 to 0.95), so the model, not the threshold, must refuse (see risk R1: a judgment call).
 
 ## Assumptions: 1–4 settled on real S3 Vectors (us-east-2); 5 still open. Rerun with `RUN_LIVE_TESTS=1 pytest -m integration -s`
 

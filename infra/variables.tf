@@ -64,7 +64,7 @@ variable "top_k" {
 variable "max_distance" {
   type        = number
   description = "Chunks with vector distance above this are treated as irrelevant. Tune with the eval set."
-  default     = 0.9
+  default     = 1.0
 }
 
 variable "extra_allowed_origins" {
