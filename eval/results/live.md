@@ -1,6 +1,6 @@
 # RAG evaluation (live)
 
-Settings: `{'top_k': 5, 'max_distance': 0.9}`
+Settings: `{'top_k': 5, 'max_distance': 1.0}`
 
 | metric | value |
 |---|---|
@@ -8,10 +8,10 @@ Settings: `{'top_k': 5, 'max_distance': 0.9}`
 | unanswerable_n | 4 |
 | hit@1_% | 75.0 |
 | MRR | 0.865 |
-| answered_% | 93.8 |
-| citations_correct_% | 93.8 |
+| answered_% | 100.0 |
+| citations_correct_% | 100.0 |
 | evidence_has_facts_% | 93.8 |
-| answer_has_facts_% | 93.8 |
+| answer_has_facts_% | 100.0 |
 | correct_refusals_% | 100.0 |
 
 ## Per-question
@@ -20,11 +20,11 @@ Settings: `{'top_k': 5, 'max_distance': 0.9}`
 |---|---|---|---|---|---|---|
 | q01 | True | True | 0.405 | [1] | [1] | ok |
 | q02 | True | True | 0.258 | [1] | [1] | ok |
-| q03 | True | False | 0.811 | [] | [1] | cites_right, evidence_ok, answer_ok, rank=3 |
+| q03 | True | True | 0.811 | [1] | [1] | rank=3 |
 | q04 | True | True | 0.536 | [2] | [2] | ok |
 | q05 | True | True | 0.538 | [2] | [2] | ok |
 | q06 | True | True | 0.727 | [2] | [2] | ok |
-| q07 | True | True | 0.702 | [2] | [2] | ok |
+| q07 | True | True | 0.702 | [2] | [2] | evidence_ok |
 | q08 | True | True | 0.697 | [2] | [2] | rank=2 |
 | q09 | True | True | 0.249 | [3] | [3] | ok |
 | q10 | True | True | 0.293 | [3] | [3] | ok |

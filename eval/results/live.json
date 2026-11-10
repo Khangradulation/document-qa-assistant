@@ -2,7 +2,7 @@
   "mode": "live",
   "settings": {
     "top_k": 5,
-    "max_distance": 0.9
+    "max_distance": 1.0
   },
   "rows": [
     {
@@ -40,16 +40,18 @@
     {
       "id": "q03",
       "answerable": true,
-      "answered": false,
+      "answered": true,
       "best_distance": 0.811,
-      "cited_pages": [],
+      "cited_pages": [
+        1
+      ],
       "expected_pages": [
         1
       ],
       "rank": 3,
-      "cites_right": false,
-      "evidence_ok": false,
-      "answer_ok": false
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
     },
     {
       "id": "q04",
@@ -112,7 +114,7 @@
       ],
       "rank": 1,
       "cites_right": true,
-      "evidence_ok": true,
+      "evidence_ok": false,
       "answer_ok": true
     },
     {
@@ -301,10 +303,10 @@
     "unanswerable_n": 4,
     "hit@1_%": 75.0,
     "MRR": 0.865,
-    "answered_%": 93.8,
-    "citations_correct_%": 93.8,
+    "answered_%": 100.0,
+    "citations_correct_%": 100.0,
     "evidence_has_facts_%": 93.8,
-    "answer_has_facts_%": 93.8,
+    "answer_has_facts_%": 100.0,
     "correct_refusals_%": 100.0
   }
 }
