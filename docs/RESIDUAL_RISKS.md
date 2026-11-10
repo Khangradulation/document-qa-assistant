@@ -35,7 +35,7 @@ touched real AWS, GitHub or a real model.
 | 2 | `$and`/`$eq` filter syntax accepted | `test_2` ✅ passed 2026-10-28 | **every query fails** or leaks across users: fix before any use |
 | 3 | 6 KB non-filterable `text` metadata round-trips | `test_3` ✅ passed 2026-10-28 | answers lose their evidence; move chunk text to DynamoDB/S3 |
 | 4 | cosine distance scale (0 = identical) | `test_4` ✅ observed same=0.0, orthogonal=0.996, opposite=2.0 (2026-10-28) | `MAX_DISTANCE` meaning changes; re-tune |
-| 5 | Titan + a Bedrock text model work end to end | `test_5a/5b` ❌ **not proven**: ThrottlingException; the account's Bedrock quotas were 0 (Titan V2 requests/min, Nova Micro tokens/min), Claude models need an Anthropic use-case form | model access / IAM / ARN problem |
+| 5 | Titan + a Bedrock text model work end to end | ✅ **observed 2026-11-09** (by script and `eval/run_eval.py --mode live`, not the `test_5a/5b` functions): Titan V2 returns 1024 dims; Haiku 4.5 via `us.anthropic.claude-haiku-4-5-20251001-v1:0` answers; live eval 15/16 correct, 4/4 refusals. Earlier throttling was the account quota (0), since raised, plus the Anthropic use-case form | model access / IAM / ARN problem |
 
 Not tested by any of them: S3 `ObjectCreated` trigger, presigned-URL upload + bucket CORS,
 Cognito sign-in, API Gateway JWT authorizer, CloudFront, alarms, the deploy role's IAM
