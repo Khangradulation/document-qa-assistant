@@ -1,0 +1,310 @@
+{
+  "mode": "live",
+  "settings": {
+    "top_k": 5,
+    "max_distance": 0.9
+  },
+  "rows": [
+    {
+      "id": "q01",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.405,
+      "cited_pages": [
+        1
+      ],
+      "expected_pages": [
+        1
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q02",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.258,
+      "cited_pages": [
+        1
+      ],
+      "expected_pages": [
+        1
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q03",
+      "answerable": true,
+      "answered": false,
+      "best_distance": 0.811,
+      "cited_pages": [],
+      "expected_pages": [
+        1
+      ],
+      "rank": 3,
+      "cites_right": false,
+      "evidence_ok": false,
+      "answer_ok": false
+    },
+    {
+      "id": "q04",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.536,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [
+        2
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q05",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.538,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [
+        2
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q06",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.727,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [
+        2
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q07",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.702,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [
+        2
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q08",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.697,
+      "cited_pages": [
+        2
+      ],
+      "expected_pages": [
+        2
+      ],
+      "rank": 2,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q09",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.249,
+      "cited_pages": [
+        3
+      ],
+      "expected_pages": [
+        3
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q10",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.293,
+      "cited_pages": [
+        3
+      ],
+      "expected_pages": [
+        3
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q11",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.817,
+      "cited_pages": [
+        3
+      ],
+      "expected_pages": [
+        3
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q12",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.797,
+      "cited_pages": [
+        3
+      ],
+      "expected_pages": [
+        3
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q13",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.483,
+      "cited_pages": [
+        4
+      ],
+      "expected_pages": [
+        4
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q14",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.644,
+      "cited_pages": [
+        4
+      ],
+      "expected_pages": [
+        4
+      ],
+      "rank": 1,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q15",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.861,
+      "cited_pages": [
+        4
+      ],
+      "expected_pages": [
+        4
+      ],
+      "rank": 2,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "q16",
+      "answerable": true,
+      "answered": true,
+      "best_distance": 0.748,
+      "cited_pages": [
+        4
+      ],
+      "expected_pages": [
+        4
+      ],
+      "rank": 2,
+      "cites_right": true,
+      "evidence_ok": true,
+      "answer_ok": true
+    },
+    {
+      "id": "u01",
+      "answerable": false,
+      "answered": false,
+      "best_distance": 0.949,
+      "cited_pages": [],
+      "expected_pages": [],
+      "correct_refusal": true
+    },
+    {
+      "id": "u02",
+      "answerable": false,
+      "answered": false,
+      "best_distance": 0.786,
+      "cited_pages": [],
+      "expected_pages": [],
+      "correct_refusal": true
+    },
+    {
+      "id": "u03",
+      "answerable": false,
+      "answered": false,
+      "best_distance": 0.75,
+      "cited_pages": [],
+      "expected_pages": [],
+      "correct_refusal": true
+    },
+    {
+      "id": "u04",
+      "answerable": false,
+      "answered": false,
+      "best_distance": 0.933,
+      "cited_pages": [],
+      "expected_pages": [],
+      "correct_refusal": true
+    }
+  ],
+  "summary": {
+    "answerable_n": 16,
+    "unanswerable_n": 4,
+    "hit@1_%": 75.0,
+    "MRR": 0.865,
+    "answered_%": 93.8,
+    "citations_correct_%": 93.8,
+    "evidence_has_facts_%": 93.8,
+    "answer_has_facts_%": 93.8,
+    "correct_refusals_%": 100.0
+  }
+}
