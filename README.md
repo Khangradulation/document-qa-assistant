@@ -14,7 +14,7 @@ React + TypeScript frontend.
 > |---|---|
 > | ✅ **Implemented and verified locally** | all backend code (105 tests), frontend (23 tests, built, and demo mode used in a browser), Terraform (`fmt`, `validate`, Checkov), workflow syntax (actionlint), dependency audits, PDF fuzzing, an offline evaluation |
 > | ✅ **Run against real AWS: S3 Vectors** | live tests 1–4 passed on 2026-10-28 in `us-east-2`: overwrite, metadata filter, 6 KB text round-trip, cosine distance (0 = identical, ~1 = orthogonal, 2 = opposite) |
-> | ✅ **Run against real AWS: Bedrock, from a local machine** | on 2026-11-09 in `us-east-2`: Titan V2 embeddings (1024 dims, no throttling after the quota increase to 60/min) and Claude Haiku 4.5 (`us.anthropic.claude-haiku-4-5-20251001-v1:0`) both answered. A local end-to-end run (PDF → chunks → Titan → temporary S3 Vectors index → Haiku → validated citations) answered 2 questions with correct page citations and refused a third. The full 20-question live evaluation scored **15 of 16 answerable questions correct, 4 of 4 unanswerable refused** ([results](eval/results/live.md)). Temporary buckets and indexes were deleted afterwards. This ran the pipeline code on a laptop, **not the deployed app** |
+> | ✅ **Run against real AWS: Bedrock, from a local machine** | on 2026-11-09 in `us-east-2`: Titan V2 embeddings (1024 dims, no throttling after the quota increase to 60/min) and Claude Haiku 4.5 (`us.anthropic.claude-haiku-4-5-20251001-v1:0`) both answered. A local end-to-end run (PDF → chunks → Titan → temporary S3 Vectors index → Haiku → validated citations) answered 2 questions with correct page citations and refused a third. The full 20-question live evaluation scored **16 of 16 answerable questions answered correctly with the right page cited, 4 of 4 unanswerable refused** (after raising `MAX_DISTANCE` from 0.9 to 1.0; at 0.9 it was 15 of 16) ([results](eval/results/live.md)). Temporary buckets and indexes were deleted afterwards. This ran the pipeline code on a laptop, **not the deployed app** |
 > | ⚠️ **Written, never executed** | the pytest functions `test_5a/5b` themselves (their checks were run by script instead), the GitHub workflows, `terraform plan/apply`, the bootstrap, the Lambda handlers on real Lambda, API Gateway, Cognito sign-in, CloudFront, S3 upload triggering ingestion |
 > | ❌ **Not done** | **no deployment exists.** The deployed app (Lambda, API Gateway, Cognito, CloudFront, DynamoDB, GitHub Actions) has never run. No screenshots of a deployed app exist. |
 >
@@ -340,7 +340,7 @@ uploads expire automatically.
 | Workflows | actionlint + shellcheck | ✅ static only |
 | Live AWS: S3 Vectors | tests 1–4 in `backend/tests/integration/` | ✅ passed once (2026-10-28, `us-east-2`) |
 | Live AWS: Bedrock | Titan V2 + Haiku 4.5 calls, local e2e script, live eval | ✅ passed 2026-11-09 (`us-east-2`) after the quota increase and Anthropic use-case form; run from a laptop, not a deployed app. The `test_5a/5b` pytest functions were not run as such |
-| Live evaluation | `eval/run_eval.py --mode live`, 20 questions | ✅ 15/16 answered correctly with right-page citations, 4/4 refusals; 1 miss (q03) not yet diagnosed |
+| Live evaluation | `eval/run_eval.py --mode live`, 20 questions | ✅ 16/16 answered with right-page citations, 4/4 refusals at `MAX_DISTANCE=1.0` (15/16 at 0.9: q03's chunk was at distance 0.915 and was filtered out) |
 | Deployment smoke tests | script + 13 tests of the script | ⚠️ logic tested, never run on a real deploy |
 
 **Evaluation** (`eval/`): 16 answerable + 4 unanswerable questions over an original 4-page PDF.
@@ -351,11 +351,14 @@ default threshold, and refuses 3 of 4 unanswerable questions (the stand-in wrong
 a real model must be measured with `--mode live`). The sweep shows why the threshold is only a
 loose pre-filter. See [eval/results/offline.md](eval/results/offline.md).
 
-The **live** run (Titan V2 + Haiku 4.5, 2026-11-09, [eval/results/live.md](eval/results/live.md))
-reached top-1 retrieval 75 %, MRR 0.865, citations correct 93.8 % and 100 % correct refusals.
-The one miss is q03 (protective gear for pH Down): the model declined to answer although the page is
-retrieved at rank 3; the cause has not been diagnosed. Caveat: this is one 4-chunk document, so it
-shows the system works but is **not** a measure of quality on real documents.
+The **live** run (Titan V2 + Haiku 4.5, 2026-11-10, [eval/results/live.md](eval/results/live.md))
+at `MAX_DISTANCE=1.0`: 16/16 answerable questions answered with the right page cited, answers
+contained the expected facts in 16/16, 4/4 unanswerable refused, top-1 retrieval 75 % (MRR 0.865).
+The cited excerpt contained every expected fact in 15/16 (q07: when an answer mentions two facts,
+the excerpt shows only the best-matching sentence). At the earlier default of 0.9, q03 failed
+because its chunk (distance 0.915) was dropped before the model saw it; unanswerable questions
+also have close hits (0.75 to 0.95), so the model, not the threshold, has to refuse. Caveat: one
+4-chunk document shows the system works but is **not** a measure of quality on real documents.
 
 ## Costs
 
