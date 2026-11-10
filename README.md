@@ -354,8 +354,8 @@ loose pre-filter. See [eval/results/offline.md](eval/results/offline.md).
 The **live** run (Titan V2 + Haiku 4.5, 2026-11-10, [eval/results/live.md](eval/results/live.md))
 at `MAX_DISTANCE=1.0`: 16/16 answerable questions answered with the right page cited, answers
 contained the expected facts in 16/16, 4/4 unanswerable refused, top-1 retrieval 75 % (MRR 0.865).
-The cited excerpt contained every expected fact in 15/16 (q07: when an answer mentions two facts,
-the excerpt shows only the best-matching sentence). At the earlier default of 0.9, q03 failed
+The cited excerpt contained every expected fact in 16/16 (one earlier run missed q07 until the
+excerpt picker learned to include every sentence an answer draws on). At the earlier default of 0.9, q03 failed
 because its chunk (distance 0.915) was dropped before the model saw it; unanswerable questions
 also have close hits (0.75 to 0.95), so the model, not the threshold, has to refuse. Caveat: one
 4-chunk document shows the system works but is **not** a measure of quality on real documents.

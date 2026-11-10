@@ -114,7 +114,7 @@
       ],
       "rank": 1,
       "cites_right": true,
-      "evidence_ok": false,
+      "evidence_ok": true,
       "answer_ok": true
     },
     {
@@ -305,7 +305,7 @@
     "MRR": 0.865,
     "answered_%": 100.0,
     "citations_correct_%": 100.0,
-    "evidence_has_facts_%": 93.8,
+    "evidence_has_facts_%": 100.0,
     "answer_has_facts_%": 100.0,
     "correct_refusals_%": 100.0
   }
