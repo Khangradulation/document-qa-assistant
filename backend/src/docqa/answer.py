@@ -13,11 +13,14 @@ from __future__ import annotations
 
 import json
 import re
+import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 from docqa.embeddings import Embedder
 from docqa.models import Citation, QueryResponse, RetrievedChunk
+from docqa.throttle import RateLimiter, call_with_backoff
 from docqa.vectorstore import VectorStore
 
 NOT_FOUND_MESSAGE = "I could not find the answer to that in the provided document."
@@ -139,19 +142,46 @@ def build_response(
 class BedrockGenerator:
     """Uses the Converse API, which has one request shape across text models."""
 
-    def __init__(self, client: Any, model_id: str, max_tokens: int = 800) -> None:
+    def __init__(
+        self,
+        client: Any,
+        model_id: str,
+        max_tokens: int = 800,
+        *,
+        requests_per_minute: int = 0,  # 0 = no client-side pacing (the query Lambda is user-facing)
+        max_retries: int = 3,  # short backoff (~1+2+4 s) so a retry still fits the 28 s API limit
+        sleep: Callable[[float], None] = time.sleep,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self._client = client
         self._model_id = model_id
         self._max_tokens = max_tokens
+        self._limiter = (
+            RateLimiter(requests_per_minute, clock=clock, sleep=sleep)
+            if requests_per_minute > 0
+            else None
+        )
+        self._max_retries = max_retries
+        self._sleep = sleep
         self.input_tokens = 0
         self.output_tokens = 0
+        self.throttle_retries = 0
+
+    def _count_retry(self) -> None:
+        self.throttle_retries += 1
 
     def generate(self, system: str, user: str) -> str:
-        response = self._client.converse(
-            modelId=self._model_id,
-            system=[{"text": system}],
-            messages=[{"role": "user", "content": [{"text": user}]}],
-            inferenceConfig={"maxTokens": self._max_tokens, "temperature": 0},
+        response = call_with_backoff(
+            lambda: self._client.converse(
+                modelId=self._model_id,
+                system=[{"text": system}],
+                messages=[{"role": "user", "content": [{"text": user}]}],
+                inferenceConfig={"maxTokens": self._max_tokens, "temperature": 0},
+            ),
+            self._limiter,
+            self._max_retries,
+            self._sleep,
+            self._count_retry,
         )
         usage = response.get("usage", {})
         self.input_tokens += int(usage.get("inputTokens", 0))

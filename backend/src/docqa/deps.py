@@ -52,5 +52,9 @@ def build_deps() -> AppDeps:
             requests_per_minute=s.embed_requests_per_minute,
         ),
         store=VectorStore(make_s3vectors_client(s.region), s.vector_bucket, s.vector_index),
-        generator=BedrockGenerator(bedrock, s.generation_model_id),
+        generator=BedrockGenerator(
+            bedrock,
+            s.generation_model_id,
+            requests_per_minute=s.generation_requests_per_minute,
+        ),
     )

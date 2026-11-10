@@ -92,3 +92,53 @@ def test_non_throttle_errors_are_not_retried() -> None:
     with pytest.raises(ClientError):
         Embedder(bedrock, "m", 8).embed("hello")
     assert calls[0] == 1
+
+
+# ---- generator: same pacing / retry behaviour ----------------------------------------------
+def test_generator_paces_calls_to_requests_per_minute() -> None:
+    from docqa.answer import BedrockGenerator
+
+    clock = FakeClock()
+    bedrock = FakeBedrock(dims=8)
+    gen = BedrockGenerator(bedrock, "m", requests_per_minute=9, sleep=clock.sleep, clock=clock.time)
+    for _ in range(20):
+        gen.generate("sys", "user")
+    assert len(bedrock.converse_calls) == 20
+    assert clock.now >= 60.0 * 2  # 20 calls at 9/min needs 3 windows
+
+
+def test_generator_has_no_pacing_by_default_and_retries_throttling() -> None:
+    from docqa.answer import BedrockGenerator
+
+    clock = FakeClock()
+    bedrock = FakeBedrock(dims=8)
+    real = bedrock.converse
+    left = [2]
+
+    def flaky(**kw: Any) -> Any:
+        if left[0]:
+            left[0] -= 1
+            raise client_error("ThrottlingException")
+        return real(**kw)
+
+    bedrock.converse = flaky  # type: ignore[method-assign]
+    gen = BedrockGenerator(bedrock, "m", sleep=clock.sleep, clock=clock.time)
+    gen.generate("sys", "user")
+    assert gen.throttle_retries == 2
+    assert clock.now < 10  # only the short backoff, no pacing delay
+
+
+def test_generator_reraises_throttling_after_retries() -> None:
+    from docqa.answer import BedrockGenerator
+
+    clock = FakeClock()
+    bedrock = FakeBedrock(dims=8)
+
+    def always(**kw: Any) -> Any:
+        raise client_error("ThrottlingException")
+
+    bedrock.converse = always  # type: ignore[method-assign]
+    gen = BedrockGenerator(bedrock, "m", max_retries=2, sleep=clock.sleep, clock=clock.time)
+    with pytest.raises(ClientError):
+        gen.generate("sys", "user")
+    assert gen.throttle_retries == 2

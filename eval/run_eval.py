@@ -56,7 +56,9 @@ def build(mode: str, s: Settings) -> tuple[Embedder, VectorStore, BedrockGenerat
     return (
         Embedder(br, s.embed_model_id, s.embed_dimensions),
         VectorStore(make_s3vectors_client(s.region), s.vector_bucket, s.vector_index),
-        BedrockGenerator(br, s.generation_model_id),
+        BedrockGenerator(
+            br, s.generation_model_id, requests_per_minute=s.generation_requests_per_minute
+        ),
     )
 
 
