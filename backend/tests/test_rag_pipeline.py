@@ -210,3 +210,31 @@ def test_citation_excerpt_in_a_full_response_contains_the_answer_fact():
     raw = json.dumps({"answerable": True, "answer": "pH 5.8 to 6.2", "sources": ["S1"]})
     r = build_response("r", raw, [RetrievedChunk(chunk, "g.pdf", 0.1)], "what ph?")
     assert "5.8 and 6.2" in r.citations[0].excerpt
+
+
+def test_excerpt_is_the_supporting_sentence_even_when_the_chunk_barely_exceeds_the_limit():
+    """Real case: a 314-char chunk used to yield a 4-sentence window with the answer buried."""
+    from docqa.answer import pick_excerpt
+
+    text = (
+        "3. Lighting Lettuce needs 14 to 16 hours of light per day. Tomatoes need 16 to 18 hours "
+        "of light per day. Seedlings should receive 18 hours of light during their first week. "
+        "Place full-spectrum LED lights 30 cm above the plant canopy. Aim for a light intensity "
+        "of 200 to 250 micromoles per square metre per second."
+    )
+    hint = (
+        "How far above the canopy should LED lights be placed? "
+        "LED lights should be placed 30 cm above the plant canopy."
+    )
+    expected = "Place full-spectrum LED lights 30 cm above the plant canopy."
+    assert pick_excerpt(text, hint) == expected
+
+
+def test_very_short_supporting_sentence_is_padded_with_following_context():
+    from docqa.answer import MIN_EXCERPT_CHARS, pick_excerpt
+
+    filler = " ".join(f"Filler sentence number {i} about nothing relevant." for i in range(20))
+    text = f"{filler} Use 5.8 pH. Check it daily with a calibrated meter."
+    out = pick_excerpt(text, "what pH 5.8")
+    assert "Use 5.8 pH. Check it daily" in out  # following context is added first
+    assert len(out) >= MIN_EXCERPT_CHARS and out in text

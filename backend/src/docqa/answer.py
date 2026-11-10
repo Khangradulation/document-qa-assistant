@@ -22,6 +22,7 @@ from docqa.vectorstore import VectorStore
 
 NOT_FOUND_MESSAGE = "I could not find the answer to that in the provided document."
 EXCERPT_CHARS = 300
+MIN_EXCERPT_CHARS = 60  # a sentence shorter than this is padded with its neighbours
 
 SYSTEM_PROMPT = """You answer questions using ONLY the numbered sources inside <sources> tags.
 
@@ -45,9 +46,9 @@ def _words(text: str) -> set[str]:
 
 def pick_excerpt(text: str, hint: str, limit: int = EXCERPT_CHARS) -> str:
     """The part of a chunk to show next to a citation: the sentence that best overlaps `hint`
-    (the answer + question), grown with neighbouring sentences up to `limit`. Always verbatim
-    text from the real chunk, never model-written. (Showing just the START of the chunk can
-    hide the very sentence that supports the answer.)"""
+    (the answer + question). Only if that sentence is very short is it padded with neighbouring
+    sentences (following first), so the supporting sentence is the excerpt, not buried inside a
+    window of its neighbours. Always verbatim text from the real chunk, never model-written."""
     if len(text) <= limit:
         return text
     sentences = re.split(r"(?<=[.!?])\s+", text)
@@ -57,15 +58,13 @@ def pick_excerpt(text: str, hint: str, limit: int = EXCERPT_CHARS) -> str:
     if len(sentences[best]) > limit:
         return sentences[best][:limit]
     lo = hi = best
-    grown = True
-    while grown:
-        grown = False
+    while len(" ".join(sentences[lo : hi + 1])) < MIN_EXCERPT_CHARS:
         if hi + 1 < len(sentences) and len(" ".join(sentences[lo : hi + 2])) <= limit:
             hi += 1
-            grown = True
-        if lo > 0 and len(" ".join(sentences[lo - 1 : hi + 1])) <= limit:
+        elif lo > 0 and len(" ".join(sentences[lo - 1 : hi + 1])) <= limit:
             lo -= 1
-            grown = True
+        else:
+            break
     return " ".join(sentences[lo : hi + 1])
 
 
