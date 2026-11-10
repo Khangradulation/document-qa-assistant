@@ -47,11 +47,19 @@ def _words(text: str) -> set[str]:
     return {w.strip(".") for w in _WORD.findall(text.lower())} - {""}
 
 
+_STOP = frozenset(
+    "a an and are as at be by do does for from how in is it of on or should that the there this "
+    "to was what when where which who why with".split()
+)
+MIN_NEW_WORDS = 2  # a further sentence must add this many meaningful hint words to be included
+
+
 def pick_excerpt(text: str, hint: str, limit: int = EXCERPT_CHARS) -> str:
-    """The part of a chunk to show next to a citation: the sentence that best overlaps `hint`
-    (the answer + question). Only if that sentence is very short is it padded with neighbouring
-    sentences (following first), so the supporting sentence is the excerpt, not buried inside a
-    window of its neighbours. Always verbatim text from the real chunk, never model-written."""
+    """The part of a chunk to show next to a citation, built from the sentences that best overlap
+    `hint` (the question + answer). It starts with the single best sentence. If the answer also
+    draws on other sentences (each adding at least MIN_NEW_WORDS meaningful words the excerpt does
+    not cover yet) they are added too, while it fits `limit`. A very short result is padded with
+    neighbouring sentences. Always verbatim text from the real chunk, never model-written."""
     if len(text) <= limit:
         return text
     sentences = re.split(r"(?<=[.!?])\s+", text)
@@ -60,15 +68,43 @@ def pick_excerpt(text: str, hint: str, limit: int = EXCERPT_CHARS) -> str:
     best = max(range(len(sentences)), key=lambda i: (scores[i], -i))
     if len(sentences[best]) > limit:
         return sentences[best][:limit]
-    lo = hi = best
-    while len(" ".join(sentences[lo : hi + 1])) < MIN_EXCERPT_CHARS:
-        if hi + 1 < len(sentences) and len(" ".join(sentences[lo : hi + 2])) <= limit:
-            hi += 1
-        elif lo > 0 and len(" ".join(sentences[lo - 1 : hi + 1])) <= limit:
-            lo -= 1
+
+    chosen = {best}
+    covered = _words(sentences[best]) & hint_words
+    meaningful = hint_words - _STOP
+    while True:
+        candidates = [
+            (len((_words(sentences[i]) & meaningful) - covered), -i, i)
+            for i in range(len(sentences))
+            if i not in chosen
+        ]
+        gain, _, pick = max(candidates, default=(0, 0, -1))
+        if gain < MIN_NEW_WORDS or pick < 0:
+            break
+        if len(_join(sentences, chosen | {pick})) > limit:
+            break
+        chosen.add(pick)
+        covered |= _words(sentences[pick]) & hint_words
+
+    while len(_join(sentences, chosen)) < MIN_EXCERPT_CHARS:  # pad a tiny excerpt with neighbours
+        after, before = max(chosen) + 1, min(chosen) - 1
+        if after < len(sentences) and len(_join(sentences, chosen | {after})) <= limit:
+            chosen.add(after)
+        elif before >= 0 and len(_join(sentences, chosen | {before})) <= limit:
+            chosen.add(before)
         else:
             break
-    return " ".join(sentences[lo : hi + 1])
+    return _join(sentences, chosen)
+
+
+def _join(sentences: list[str], chosen: set[int]) -> str:
+    """Chosen sentences in document order; '...' marks a gap so the excerpt isn't misleading."""
+    out = ""
+    prev = None
+    for i in sorted(chosen):
+        out += sentences[i] if prev is None else (" " if i == prev + 1 else " ... ") + sentences[i]
+        prev = i
+    return out
 
 
 class AnswerError(Exception):

@@ -238,3 +238,35 @@ def test_very_short_supporting_sentence_is_padded_with_following_context():
     out = pick_excerpt(text, "what pH 5.8")
     assert "Use 5.8 pH. Check it daily" in out  # following context is added first
     assert len(out) >= MIN_EXCERPT_CHARS and out in text
+
+
+def test_excerpt_covers_every_fact_when_the_answer_draws_on_two_sentences():
+    """Real q07 case: the answer also mentioned the 24 C risk, so the single best sentence was the
+    root-rot one and the 18 to 22 sentence (the actual answer) was left out of the excerpt."""
+    from docqa.answer import EXCERPT_CHARS, pick_excerpt
+
+    text = (
+        "2. Water and Nutrients Keep the nutrient solution at a pH between 5.8 and 6.2. "
+        "For lettuce the target EC is 1.2 to 1.8 mS/cm. "
+        "Replace the whole reservoir solution every 14 days. "
+        "Water temperature should stay between 18 and 22 degrees Celsius. Above 24 degrees Celsius "
+        "there is a high risk of root rot caused by Pythium. Run the air stone 24 hours a day to "
+        "keep dissolved oxygen high."
+    )
+    hint = (
+        "What water temperature range is ideal? The ideal range is 18 to 22 degrees Celsius, "
+        "and above 24 degrees Celsius there is a high risk of root rot."
+    )
+    out = pick_excerpt(text, hint)
+    assert "18 and 22" in out and "24 degrees" in out
+    assert "pH between 5.8" not in out and len(out) <= EXCERPT_CHARS
+    assert out in text  # adjacent sentences are joined verbatim
+
+
+def test_excerpt_marks_a_gap_between_non_adjacent_sentences():
+    from docqa.answer import pick_excerpt
+
+    filler = " ".join(f"Unrelated filler sentence {i} goes here." for i in range(8))
+    text = f"Cats sleep eighteen hours daily. {filler} Dogs bark loudly at night."
+    out = pick_excerpt(text, "Do cats sleep daily and do dogs bark loudly at night?", limit=120)
+    assert "Cats sleep" in out and "Dogs bark" in out and " ... " in out
