@@ -36,6 +36,8 @@ class Settings:
     embed_model_id: str = "amazon.titan-embed-text-v2:0"
     embed_dimensions: int = 1024  # Titan V2 accepts 256 / 512 / 1024
     generation_model_id: str = ""  # must be chosen & enabled in your account
+    # Titan V2 on-demand quota is 60 req/min; stay under it with headroom.
+    embed_requests_per_minute: int = 50
 
     # --- Retrieval ---
     top_k: int = 5
@@ -73,6 +75,9 @@ class Settings:
             embed_model_id=e("EMBED_MODEL_ID", cls.embed_model_id),
             embed_dimensions=_int("EMBED_DIMENSIONS", cls.embed_dimensions),
             generation_model_id=e("GENERATION_MODEL_ID", ""),
+            embed_requests_per_minute=_int(
+                "EMBED_REQUESTS_PER_MINUTE", cls.embed_requests_per_minute
+            ),
             top_k=_int("TOP_K", cls.top_k),
             max_distance=_float("MAX_DISTANCE", cls.max_distance),
             chunk_tokens=_int("CHUNK_TOKENS", cls.chunk_tokens),

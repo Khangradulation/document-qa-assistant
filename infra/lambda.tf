@@ -15,7 +15,7 @@ locals {
     ingest = {
       name    = "${local.prefix}-ingest"
       handler = "docqa.handlers.ingest_handler.lambda_handler"
-      timeout = 300
+      timeout = 900 # Lambda max; paced embedding (50 req/min) needs ~1 min per 50 chunks
       memory  = 1024
     }
   }

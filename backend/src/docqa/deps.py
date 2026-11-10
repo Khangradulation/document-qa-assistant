@@ -45,7 +45,12 @@ def build_deps() -> AppDeps:
         repo=DocumentRepo(table),
         s3=s3,
         lambda_client=boto3.client("lambda", region_name=s.region),
-        embedder=Embedder(bedrock, s.embed_model_id, s.embed_dimensions),
+        embedder=Embedder(
+            bedrock,
+            s.embed_model_id,
+            s.embed_dimensions,
+            requests_per_minute=s.embed_requests_per_minute,
+        ),
         store=VectorStore(make_s3vectors_client(s.region), s.vector_bucket, s.vector_index),
         generator=BedrockGenerator(bedrock, s.generation_model_id),
     )

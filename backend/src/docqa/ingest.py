@@ -55,7 +55,7 @@ def ingest_document(
             raise PdfError(
                 "DOCUMENT_TOO_LARGE", f"Document has more than {s.max_chunks} text chunks"
             )
-        vectors = [deps.embedder.embed(c.text) for c in chunks]
+        vectors = deps.embedder.embed_many([c.text for c in chunks])
         new_keys = [c.vector_key for c in chunks]
 
         deps.store.put_chunks(chunks, vectors, filename=rec.filename, owner_id=owner_id)

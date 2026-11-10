@@ -28,7 +28,13 @@ class World:
             repo=DocumentRepo(self.table),
             s3=self.s3,
             lambda_client=self.lam,
-            embedder=Embedder(self.bedrock, settings.embed_model_id, DIMS),
+            embedder=Embedder(
+                self.bedrock,
+                settings.embed_model_id,
+                DIMS,
+                requests_per_minute=10_000,
+                sleep=lambda _s: None,
+            ),
             store=VectorStore(self.s3v, "vb", "idx"),
             generator=BedrockGenerator(self.bedrock, "gen-model"),
         )
