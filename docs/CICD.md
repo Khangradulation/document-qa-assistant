@@ -36,14 +36,16 @@ at all, only non-secret *variables*.
 * **Destroy is its own job** so it still runs if the demo job's runner dies, times out or is
   cancelled, and it logs in to AWS again (the 1 hour role session would have expired during a
   long wait). If even that fails, `demo-cleanup.yml` retries daily.
+* **No login (`demo_mode=true`).** The demo stack sets the Terraform variable `demo_mode`
+  (default false): API routes have no JWT authorizer, the Lambdas set one shared owner
+  (`DEMO_MODE=true`), the web app skips sign-in, and the API is capped at 5 requests/second
+  (burst 10). Anyone with the URL can use it and everyone shares one workspace, so do not upload
+  anything private. Normal deployments leave `demo_mode` false and keep the Cognito login. The
+  Cognito pool is still created in demo mode but unused.
 * **The 3 questions** (`q04`, `q11`, `u01` from `eval/questions.json`) go through the real
-  stack: Cognito sign-in, presigned upload, the ingestion Lambda, vector search, Haiku. The run
+  stack with no login: presigned upload, the ingestion Lambda, vector search, Haiku. The run
   fails if a fact is missing, a wrong page is cited, or the unanswerable one is not refused.
-  This needs `enable_test_auth` (a Cognito flow only AWS-credentialed callers can use); the
-  demo sets it, normal deployments do not.
-* **A login for you during the demo (optional):** set repository variable `DEMO_USER_EMAIL`
-  and secret `DEMO_USER_PASSWORD` (`gh secret set DEMO_USER_PASSWORD`, so the password never
-  passes through chat). The temporary smoke-test user's password is random and masked.
+  (The Cognito-authenticated path is therefore not exercised by the demo run.)
 * **The repo is public, so run logs are public.** Only the URL is printed.
 
 Extra repository variables for the demo: `GENERATION_MODEL_ARNS`, a JSON list with the inference
