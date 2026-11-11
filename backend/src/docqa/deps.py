@@ -37,8 +37,14 @@ def build_deps() -> AppDeps:
     s = Settings.from_env()
     s.validate()
     bedrock = make_bedrock_client(s.region)
-    # SigV4 is required for presigned URLs in every Region.
-    s3 = boto3.client("s3", region_name=s.region, config=Config(signature_version="s3v4"))
+    # SigV4 is required for presigned URLs in every Region. Virtual-hosted addressing makes boto3
+    # sign the REGIONAL host (bucket.s3.<region>.amazonaws.com). The default global host answers
+    # 307 for buckets that are new, which breaks browser uploads (a PUT cannot follow it).
+    s3 = boto3.client(
+        "s3",
+        region_name=s.region,
+        config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}),
+    )
     table = boto3.resource("dynamodb", region_name=s.region).Table(s.table_name)
     return AppDeps(
         settings=s,

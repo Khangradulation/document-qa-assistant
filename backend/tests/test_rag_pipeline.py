@@ -270,3 +270,25 @@ def test_excerpt_marks_a_gap_between_non_adjacent_sentences():
     text = f"Cats sleep eighteen hours daily. {filler} Dogs bark loudly at night."
     out = pick_excerpt(text, "Do cats sleep daily and do dogs bark loudly at night?", limit=120)
     assert "Cats sleep" in out and "Dogs bark" in out and " ... " in out
+
+
+def test_presigned_upload_urls_use_the_regional_s3_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The global host answers 307 for new buckets, so the URL must name the Region."""
+    from docqa import deps
+
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "a")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "b")
+    monkeypatch.setattr(deps, "make_bedrock_client", lambda _r: object())
+    monkeypatch.setattr(deps, "make_s3vectors_client", lambda _r: object())
+    monkeypatch.setattr(deps.Settings, "validate", lambda _self: None)
+    fake_ddb = type("FakeDynamo", (), {"Table": lambda _self, _name: None})()
+    monkeypatch.setattr(deps.boto3, "resource", lambda *_a, **_k: fake_ddb)
+    monkeypatch.setenv("AWS_REGION", "us-east-2")
+    deps.build_deps.cache_clear()
+    try:
+        url = deps.build_deps().s3.generate_presigned_url(
+            "put_object", Params={"Bucket": "bkt", "Key": "k"}
+        )
+    finally:
+        deps.build_deps.cache_clear()
+    assert url.startswith("https://bkt.s3.us-east-2.amazonaws.com/k?")
