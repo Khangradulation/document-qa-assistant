@@ -58,6 +58,17 @@ variable "github_teardown_environment" {
   default     = "dev-teardown"
 }
 
+variable "github_oidc_sub_prefix" {
+  type        = string
+  description = <<-EOT
+    Start of the OIDC `sub` claim GitHub issues for this repo. Leave empty for the classic form
+    "repo:owner/repo". Newer repositories use IMMUTABLE subjects that embed numeric IDs, e.g.
+    "repo:owner@123/repo@456", and then this MUST be set or every role assumption is refused. Get it with:
+      gh api repos/OWNER/REPO/actions/oidc/customization/sub --jq .sub_claim_prefix
+  EOT
+  default     = ""
+}
+
 variable "github_demo_environment" {
   type        = string
   description = "GitHub Environment (main only, no reviewers) used by the demo and daily-cleanup workflows."
@@ -75,6 +86,7 @@ data "aws_caller_identity" "current" {}
 locals {
   account_id = data.aws_caller_identity.current.account_id
   prefix     = "${var.app_name}-${var.environment}"
+  sub_prefix = var.github_oidc_sub_prefix != "" ? var.github_oidc_sub_prefix : "repo:${var.github_repository}"
   state_bkt  = "${var.app_name}-tfstate-${local.account_id}"
   oidc_arn = (
     var.create_oidc_provider
@@ -184,9 +196,9 @@ data "aws_iam_policy_document" "trust_deploy" {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repository}:environment:${var.github_environment}",
-        "repo:${var.github_repository}:environment:${var.github_teardown_environment}",
-        "repo:${var.github_repository}:environment:${var.github_demo_environment}",
+        "${local.sub_prefix}:environment:${var.github_environment}",
+        "${local.sub_prefix}:environment:${var.github_teardown_environment}",
+        "${local.sub_prefix}:environment:${var.github_demo_environment}",
       ]
     }
   }
@@ -208,8 +220,8 @@ data "aws_iam_policy_document" "trust_plan" {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repository}:pull_request",
-        "repo:${var.github_repository}:ref:refs/heads/main",
+        "${local.sub_prefix}:pull_request",
+        "${local.sub_prefix}:ref:refs/heads/main",
       ]
     }
   }

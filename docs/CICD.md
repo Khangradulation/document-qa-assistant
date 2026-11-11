@@ -60,6 +60,10 @@ another project already created the account's GitHub OIDC provider.
    terraform -chdir=infra/bootstrap apply -var github_repository=<owner>/<repo>
    ```
    If your AWS account already has a GitHub OIDC provider add `-var create_oidc_provider=false`.
+   **Newer repositories get immutable OIDC subject claims** (`repo:owner@<id>/repo@<id>:...`),
+   and then every role assumption is refused unless you also pass
+   `-var github_oidc_sub_prefix=$(gh api repos/<owner>/<repo>/actions/oidc/customization/sub --jq .sub_claim_prefix)`.
+   (Symptom: `Not authorized to perform sts:AssumeRoleWithWebIdentity`.)
    Keep the local state file of this folder safe (it is git-ignored).
 3. **Choose a Bedrock text model** and make sure it is enabled for your account in your
    Region (Bedrock console → Model access). Write down its ID.
