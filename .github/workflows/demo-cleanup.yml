@@ -67,7 +67,20 @@ jobs:
               aws resourcegroupstaggingapi get-resources --region "$r" \
                 --tag-filters Key=Application,Values=document-qa-assistant Key=ManagedBy,Values=terraform \
                 --query 'ResourceTagMappingList[].ResourceARN' --output text | tr '\t' '\n'
-            done | sort -u | grep -v '^$' || true
+            done | sort -u | grep -v '^$' | drop_deleted_user_pools || true
+          }
+          # The tag index keeps entries for DELETED Cognito user pools for days, so confirm that
+          # a flagged user pool still exists before reporting it (other types are reported as-is).
+          drop_deleted_user_pools() {
+            while read -r arn; do
+              case "$arn" in
+                arn:aws:cognito-idp:*:userpool/*)
+                  pool_region=$(echo "$arn" | cut -d: -f4)
+                  if aws cognito-idp describe-user-pool --region "$pool_region" \
+                    --user-pool-id "${arn##*/}" > /dev/null 2>&1; then echo "$arn"; fi ;;
+                *) echo "$arn" ;;
+              esac
+            done
           }
           left=$(find_left)
           if [ -n "$left" ]; then

@@ -16,8 +16,9 @@ React + TypeScript frontend.
 > | ✅ **Applied to real AWS: the bootstrap** | on 2026-11-11 in `us-east-2`: state bucket (`document-qa-assistant-tfstate-<account>`), plan and deploy IAM roles, permissions boundary; the account's existing GitHub OIDC provider is reused. Nothing from the app stack is deployed |
 > | ✅ **Run against real AWS: S3 Vectors** | live tests 1–4 passed on 2026-10-28 in `us-east-2`: overwrite, metadata filter, 6 KB text round-trip, cosine distance (0 = identical, ~1 = orthogonal, 2 = opposite) |
 > | ✅ **Run against real AWS: Bedrock, from a local machine** | on 2026-11-09 in `us-east-2`: Titan V2 embeddings (1024 dims, no throttling after the quota increase to 60/min) and Claude Haiku 4.5 (`us.anthropic.claude-haiku-4-5-20251001-v1:0`) both answered. A local end-to-end run (PDF → chunks → Titan → temporary S3 Vectors index → Haiku → validated citations) answered 2 questions with correct page citations and refused a third. The full 20-question live evaluation scored **16 of 16 answerable questions answered correctly with the right page cited, 4 of 4 unanswerable refused** (after raising `MAX_DISTANCE` from 0.9 to 1.0; at 0.9 it was 15 of 16) ([results](eval/results/live.md)). Temporary buckets and indexes were deleted afterwards. This ran the pipeline code on a laptop, **not the deployed app** |
-> | ⚠️ **Written, never executed** | the pytest functions `test_5a/5b` themselves (their checks were run by script instead), the GitHub workflows (including the new demo and cleanup workflows: linted with actionlint, never dispatched), `terraform plan/apply` of the app stack, the Lambda handlers on real Lambda, API Gateway, Cognito sign-in, CloudFront, S3 upload triggering ingestion |
-> | ❌ **Not done** | **no deployment exists.** The deployed app (Lambda, API Gateway, Cognito, CloudFront, DynamoDB, GitHub Actions) has never run. No screenshots of a deployed app exist. |
+> | ✅ **Deployed to real AWS, tested, destroyed (demo workflow)** | on 2026-11-11 the GitHub Actions *demo* workflow ([run](https://github.com/Khangradulation/document-qa-assistant/actions/runs/43074515055), commit `48c6214`) applied the whole stack (58 resources) in `us-east-2` via OIDC, passed the 6 deployment smoke tests, uploaded the sample PDF through the real presigned-URL path, waited for the real ingestion Lambda to reach READY (4 pages, 4 chunks), and asked 3 questions through the live API: pH range and LED height were answered correctly with the right page cited, and the starter-kit price was refused. It then destroyed all 58 resources (checked afterwards: nothing left). It took 5 runs to get there; each failure was a real bug, now fixed (OIDC subject format, destroy permissions, CLI input handling, a 201 status code, and presigned URLs using S3's global host, which answers 307 for new buckets) |
+> | ⚠️ **Still not verified** | signing in through the web UI in a browser (the live test signs in with an AWS-credentialed admin flow that exists only when `enable_test_auth` is on), the 20-question evaluation against the deployed API, the frontend's look on a deployed stack (no screenshots), and the daily cleanup workflow's destroy path with real leftovers (it ran once on empty state) |
+> | ❌ **Not running now** | **nothing is deployed.** The demo stack is destroyed after every run; only the bootstrap (state bucket, CI roles) remains |
 >
 > The offline evaluation uses *stand-in* models, so it checks the pipeline and **not** answer
 > quality. Details and the full risk register: [docs/RESIDUAL_RISKS.md](docs/RESIDUAL_RISKS.md).
@@ -203,7 +204,8 @@ Other commands: `make tf-check` (needs Terraform + `.venv-tools`: `python3 -m ve
 
 ## Deploying to AWS
 
-**Not yet done.** Everything below is the intended procedure; nothing has been executed.
+**The one-click path has been run:** the *demo* workflow (see [docs/CICD.md](docs/CICD.md)) deploys,
+tests and destroys this stack on a timer. The steps below are for a longer-lived deployment of your own.
 It creates billable resources (see [Costs](#costs)). Do it only when you are ready.
 
 ### 1. Choose Region and models
@@ -342,7 +344,7 @@ uploads expire automatically.
 | Live AWS: S3 Vectors | tests 1–4 in `backend/tests/integration/` | ✅ passed once (2026-10-28, `us-east-2`) |
 | Live AWS: Bedrock | Titan V2 + Haiku 4.5 calls, local e2e script, live eval | ✅ passed 2026-11-09 (`us-east-2`) after the quota increase and Anthropic use-case form; run from a laptop, not a deployed app. The `test_5a/5b` pytest functions were not run as such |
 | Live evaluation | `eval/run_eval.py --mode live`, 20 questions | ✅ 16/16 answered with right-page citations, 4/4 refusals at `MAX_DISTANCE=1.0` (15/16 at 0.9: q03's chunk was at distance 0.915 and was filtered out) |
-| Deployment smoke tests | script + 13 tests of the script | ⚠️ logic tested, never run on a real deploy |
+| Deployment smoke tests | script + 13 tests of the script | ✅ passed on a real deploy (demo run 2026-11-11), plus the live 3-question test |
 
 **Evaluation** (`eval/`): 16 answerable + 4 unanswerable questions over an original 4-page PDF.
 Metrics: top-1 retrieval and MRR, citation correctness (every cited page is an expected page),

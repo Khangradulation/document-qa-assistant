@@ -54,9 +54,9 @@ Why chunks keep their page number: each stored vector carries metadata
 - [x] 1 Skeleton + contracts (config, models, tests, lint, types)
 - [x] 2 Core RAG (PDF → chunks → embeddings → vector store → retrieval → answer → citation check)
 - [x] 3 API + document lifecycle
-- [x] 4 Terraform (static checks only; never planned or applied)
+- [x] 4 Terraform (applied and destroyed by the demo workflow on 2026-11-11; no long-lived deployment)
 - [x] 5 Frontend (demo mode checked in a browser; real Cognito/API path untested)
-- [x] 6 CI/CD (written + actionlint only; never run on GitHub)
+- [x] 6 CI/CD (demo workflow run end to end on GitHub 2026-11-11: apply, live test, destroy; see docs/CICD.md)
 - [x] 7 Hardening + eval (offline only; live tests written but NOT run)
 - [x] 8 README + release
 

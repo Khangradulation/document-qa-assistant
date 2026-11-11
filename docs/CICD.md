@@ -1,8 +1,11 @@
 # CI/CD guide
 
-Status: workflows are written and **statically validated only** (actionlint). They have
-**never run on GitHub** and nothing has been deployed. Expect to fix small things on the
-first real run.
+Status: the CI checks and the **demo** workflow have run on GitHub (run 6, 2026-11-11, passed:
+apply, smoke tests, live 3-question test, destroy; the earlier 5 runs each found and fixed a real
+bug). The daily **cleanup** workflow has run once, on empty state (its tag check initially failed
+because AWS's tag index keeps deleted Cognito user pools for days; it now confirms a pool exists
+before reporting it). Its destroy path with real leftovers has not been exercised in CI, though the
+same composite action is what the demo's destroy job uses. Not verified: browser sign-in to the UI.
 
 ## The workflows
 
