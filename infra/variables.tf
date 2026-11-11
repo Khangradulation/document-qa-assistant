@@ -117,6 +117,12 @@ variable "budget_email" {
   default = ""
 }
 
+variable "enable_test_auth" {
+  type        = bool
+  description = "Also allow the AWS-credentialed admin password flow on the app client (used by the CI demo smoke test). Leave false for real use."
+  default     = false
+}
+
 variable "force_destroy" {
   type        = bool
   description = "Allow terraform destroy to delete non-empty buckets (and their documents). Keep false except for dev teardown."

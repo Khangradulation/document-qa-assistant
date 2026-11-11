@@ -58,6 +58,12 @@ variable "github_teardown_environment" {
   default     = "dev-teardown"
 }
 
+variable "github_demo_environment" {
+  type        = string
+  description = "GitHub Environment (main only, no reviewers) used by the demo and daily-cleanup workflows."
+  default     = "demo"
+}
+
 variable "create_oidc_provider" {
   type        = bool
   description = "An account can have only one GitHub OIDC provider. Set false if it already exists."
@@ -180,6 +186,7 @@ data "aws_iam_policy_document" "trust_deploy" {
       values = [
         "repo:${var.github_repository}:environment:${var.github_environment}",
         "repo:${var.github_repository}:environment:${var.github_teardown_environment}",
+        "repo:${var.github_repository}:environment:${var.github_demo_environment}",
       ]
     }
   }
@@ -390,7 +397,7 @@ data "aws_iam_policy_document" "deploy" {
   }
   statement {
     sid       = "ReadOnlyLookups"
-    actions   = ["sts:GetCallerIdentity", "cloudwatch:DescribeAlarms", "iam:GetPolicy", "iam:ListOpenIDConnectProviders"]
+    actions   = ["sts:GetCallerIdentity", "cloudwatch:DescribeAlarms", "iam:GetPolicy", "iam:ListOpenIDConnectProviders", "tag:GetResources"]
     resources = ["*"]
   }
   # IAM: only ${prefix}-* roles, and a new role MUST carry the permissions boundary.

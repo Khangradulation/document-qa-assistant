@@ -33,8 +33,13 @@ resource "aws_cognito_user_pool_client" "web" {
   name         = "${local.prefix}-web"
   user_pool_id = aws_cognito_user_pool.users.id
 
-  generate_secret               = false # browser apps cannot keep secrets
-  explicit_auth_flows           = ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
+  generate_secret = false # browser apps cannot keep secrets
+  # ADMIN_USER_PASSWORD_AUTH is only for the CI demo's smoke test: it works solely for callers
+  # holding AWS credentials with cognito-idp:AdminInitiateAuth, never for browsers or the public.
+  explicit_auth_flows = concat(
+    ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"],
+    var.enable_test_auth ? ["ALLOW_ADMIN_USER_PASSWORD_AUTH"] : [],
+  )
   prevent_user_existence_errors = "ENABLED"
   enable_token_revocation       = true
   access_token_validity         = 60
