@@ -4,19 +4,50 @@ Status: workflows are written and **statically validated only** (actionlint). Th
 **never run on GitHub** and nothing has been deployed. Expect to fix small things on the
 first real run.
 
-## The three workflows
+## The workflows
 
 | File | Trigger | Does | AWS access |
 |---|---|---|---|
 | `ci.yml` | every PR, push to `main`, and called by deploy | ruff, mypy, pytest · eslint, tsc, vitest, build, npm audit · terraform fmt/validate · Checkov, pip-audit, actionlint | **none** |
 | `deploy.yml` | push to `main` (once `DEPLOY_ENABLED=true`) or manual | gate → CI → plan → **approval** → apply → frontend → smoke tests | OIDC: *plan* role (read-only), then *deploy* role |
 | `teardown.yml` | manual only, typed confirmation | `terraform destroy` of the dev app | OIDC: deploy role via separate `dev-teardown` environment |
+| `demo.yml` | manual only (`minutes`, 1 to 60, default 30) | validate → CI → apply → smoke tests → **3 live questions** → print URL → wait → **destroy (separate `always()` job)** | OIDC: deploy role via the `demo` environment |
+| `demo-cleanup.yml` | daily 07:17 UTC, or manual | destroy anything the demo left behind, then fail loudly if tagged resources remain | same |
 
 How AWS access works without keys: GitHub signs a short-lived token for each job saying
 *"I am repo X, environment Y"*. AWS trusts GitHub as an identity provider and only lets the
 token assume a role if those claims match the role's trust policy (set in
 `infra/bootstrap`). Nothing secret is stored in GitHub; there are no repository *secrets*
 at all, only non-secret *variables*.
+
+## The demo (temporary environment that destroys itself)
+
+`demo.yml` is for showing the app without leaving anything running. Details worth knowing:
+
+* **Its own state file** (`document-qa-assistant/demo/terraform.tfstate`), so neither the demo
+  nor the daily cleanup can touch a real `dev` deployment. The two use the same resource names,
+  so they cannot exist at the same time (the second would fail to create its buckets).
+* **Your click on Run workflow is the approval.** The `demo` GitHub Environment has no
+  reviewers (the cleanup must be able to run unattended) and is limited to `main`. Do not add
+  reviewers to it, or the destroy would wait for a human.
+* **Destroy is its own job** so it still runs if the demo job's runner dies, times out or is
+  cancelled, and it logs in to AWS again (the 1 hour role session would have expired during a
+  long wait). If even that fails, `demo-cleanup.yml` retries daily.
+* **The 3 questions** (`q04`, `q11`, `u01` from `eval/questions.json`) go through the real
+  stack: Cognito sign-in, presigned upload, the ingestion Lambda, vector search, Haiku. The run
+  fails if a fact is missing, a wrong page is cited, or the unanswerable one is not refused.
+  This needs `enable_test_auth` (a Cognito flow only AWS-credentialed callers can use); the
+  demo sets it, normal deployments do not.
+* **A login for you during the demo (optional):** set repository variable `DEMO_USER_EMAIL`
+  and secret `DEMO_USER_PASSWORD` (`gh secret set DEMO_USER_PASSWORD`, so the password never
+  passes through chat). The temporary smoke-test user's password is random and masked.
+* **The repo is public, so run logs are public.** Only the URL is printed.
+
+Extra repository variables for the demo: `GENERATION_MODEL_ARNS`, a JSON list with the inference
+profile ARN and the foundation-model ARNs it routes to (for Haiku 4.5:
+`us.anthropic.claude-haiku-4-5-20251001-v1:0` plus its us-east-1, us-east-2 and us-west-2 models).
+The Environment `demo` also needs creating. Bootstrap with `-var create_oidc_provider=false` if
+another project already created the account's GitHub OIDC provider.
 
 ## One-time setup (in this order)
 

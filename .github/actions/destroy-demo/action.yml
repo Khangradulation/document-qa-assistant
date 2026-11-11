@@ -1,0 +1,69 @@
+name: Destroy the demo stack
+description: >
+  Re-authenticates to AWS (fresh OIDC token), then runs terraform destroy against the DEMO state
+  only (key document-qa-assistant/demo/...). Does nothing if that state is empty, and never
+  creates anything. Used by demo.yml (always) and demo-cleanup.yml (daily).
+inputs:
+  role-arn:
+    description: Deploy role to assume through OIDC
+    required: true
+  region:
+    required: true
+  state-bucket:
+    required: true
+  permissions-boundary-arn:
+    required: true
+  generation-model-id:
+    required: true
+  generation-model-arns:
+    description: JSON list of IAM ARNs for the generation model / inference profile
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+      with:
+        python-version: "3.14"
+    - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+      with:
+        terraform_version: "1.17.1"
+        terraform_wrapper: false
+    - name: Build Lambda package (the configuration reads the zip's hash)
+      shell: bash
+      run: python scripts/build_lambda.py
+    - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+      with:
+        role-to-assume: ${{ inputs.role-arn }}
+        aws-region: ${{ inputs.region }}
+        role-session-name: gha-demo-destroy-${{ github.run_id }}
+    - name: terraform destroy (demo state only)
+      shell: bash
+      working-directory: infra
+      env:
+        TF_IN_AUTOMATION: "true"
+        TF_VAR_region: ${{ inputs.region }}
+        TF_VAR_generation_model_id: ${{ inputs.generation-model-id }}
+        TF_VAR_generation_model_arns: ${{ inputs.generation-model-arns }}
+        TF_VAR_permissions_boundary_arn: ${{ inputs.permissions-boundary-arn }}
+        TF_VAR_force_destroy: "true"
+        TF_VAR_enable_test_auth: "true"
+        STATE_BUCKET: ${{ inputs.state-bucket }}
+        REGION: ${{ inputs.region }}
+      run: |
+        terraform init -input=false \
+          -backend-config="bucket=$STATE_BUCKET" -backend-config="region=$REGION" \
+          -backend-config="key=document-qa-assistant/demo/terraform.tfstate"
+        count=$(terraform state list | wc -l | tr -d ' ')
+        if [ "$count" = "0" ]; then
+          echo "Demo state is empty: nothing to destroy."
+          echo "### Demo destroy: nothing was deployed" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+        echo "Destroying $count tracked resources..."
+        terraform destroy -auto-approve -input=false -lock-timeout=10m
+        remaining=$(terraform state list | wc -l | tr -d ' ')
+        if [ "$remaining" != "0" ]; then
+          echo "::error::$remaining resources are still in the demo state after destroy"
+          exit 1
+        fi
+        echo "### Demo destroyed ($count resources removed)" >> "$GITHUB_STEP_SUMMARY"

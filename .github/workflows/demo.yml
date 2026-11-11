@@ -1,0 +1,211 @@
+name: Demo (deploy, test, wait, destroy)
+
+# Brings the whole app up on AWS for a short, chosen time, proves it answers questions, and
+# ALWAYS tears it down again. You (someone with write access) clicking "Run workflow" is the
+# approval. The demo has its OWN state file, so it never touches a real dev deployment.
+#
+#   validate -> CI checks -> demo (apply, smoke tests, print URL, wait)
+#                                  \-> destroy (separate job, runs even if the demo failed,
+#                                      timed out or was cancelled, with a FRESH AWS login)
+# Safety net: demo-cleanup.yml destroys anything left behind once a day.
+on:
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: "Minutes to keep the demo up after the tests pass (whole number, 1 to 60)"
+        required: true
+        default: "30"
+        type: string
+
+permissions:
+  contents: read
+
+# One at a time, shared with demo-cleanup.yml, and never cancel one half-way through an apply.
+concurrency:
+  group: demo-stack
+  cancel-in-progress: false
+
+env:
+  DEMO_STATE_KEY: document-qa-assistant/demo/terraform.tfstate
+
+jobs:
+  validate:
+    name: Validate input and settings
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check branch, minutes and repository variables (before anything is created)
+        env:
+          REF: ${{ github.ref }}
+          MINUTES: ${{ inputs.minutes }}
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          AWS_DEPLOY_ROLE_ARN: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          PERMISSIONS_BOUNDARY_ARN: ${{ vars.PERMISSIONS_BOUNDARY_ARN }}
+          GENERATION_MODEL_ID: ${{ vars.GENERATION_MODEL_ID }}
+          GENERATION_MODEL_ARNS: ${{ vars.GENERATION_MODEL_ARNS }}
+        run: |
+          fail=0
+          if [ "$REF" != "refs/heads/main" ]; then echo "::error::The demo runs only from main (this run is on $REF)."; fail=1; fi
+          if ! [[ "$MINUTES" =~ ^[0-9]{1,2}$ ]] || [ "$((10#$MINUTES))" -lt 1 ] || [ "$((10#$MINUTES))" -gt 60 ]; then
+            echo "::error::minutes must be a whole number from 1 to 60 (got '$MINUTES')."; fail=1
+          fi
+          for v in AWS_REGION TF_STATE_BUCKET AWS_DEPLOY_ROLE_ARN PERMISSIONS_BOUNDARY_ARN GENERATION_MODEL_ID GENERATION_MODEL_ARNS; do
+            if [ -z "${!v}" ]; then echo "::error::Repository variable $v is not set (see docs/CICD.md)"; fail=1; fi
+          done
+          if [ -n "$GENERATION_MODEL_ARNS" ] && ! echo "$GENERATION_MODEL_ARNS" | jq -e 'type == "array" and length > 0' > /dev/null; then
+            echo "::error::GENERATION_MODEL_ARNS must be a JSON list of ARNs"; fail=1
+          fi
+          exit "$fail"
+
+  checks:
+    name: CI checks
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  demo:
+    name: Deploy, test, wait
+    needs: [validate, checks]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # Not a human approval gate (no reviewers): it exists so the AWS role's trust policy can name
+    # it, and it is limited to main. Your click on "Run workflow" is the approval.
+    environment:
+      name: demo
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_VAR_region: ${{ vars.AWS_REGION }}
+      TF_VAR_generation_model_id: ${{ vars.GENERATION_MODEL_ID }}
+      TF_VAR_generation_model_arns: ${{ vars.GENERATION_MODEL_ARNS }}
+      TF_VAR_permissions_boundary_arn: ${{ vars.PERMISSIONS_BOUNDARY_ARN }}
+      TF_VAR_force_destroy: "true" # so destroy can empty the buckets
+      TF_VAR_enable_test_auth: "true" # lets the smoke test sign in with the AWS-credentialed admin flow
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "1.17.1"
+          terraform_wrapper: false
+      - name: Build Lambda package (reproducible)
+        run: python scripts/build_lambda.py
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: gha-demo-${{ github.run_id }}
+
+      - name: terraform apply
+        working-directory: infra
+        env:
+          STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          REGION: ${{ vars.AWS_REGION }}
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=$STATE_BUCKET" -backend-config="region=$REGION" \
+            -backend-config="key=$DEMO_STATE_KEY"
+          terraform apply -auto-approve -input=false -lock-timeout=10m
+          terraform output -json > outputs.json # names and public URLs only, no secrets
+
+      - name: Publish the frontend
+        env:
+          REGION: ${{ vars.AWS_REGION }}
+        run: |
+          jq --arg region "$REGION" '{demo: false, apiUrl: .api_url.value, region: $region,
+              userPoolId: .cognito_user_pool_id.value, clientId: .cognito_client_id.value}' \
+            infra/outputs.json > frontend/public/config.json
+          (cd frontend && npm ci && npm run build)
+          BUCKET=$(jq -r '.frontend_bucket.value' infra/outputs.json)
+          DIST=$(jq -r '.cloudfront_distribution_id.value' infra/outputs.json)
+          aws s3 sync frontend/dist "s3://$BUCKET" --delete \
+            --exclude index.html --exclude config.json \
+            --cache-control "public,max-age=31536000,immutable"
+          for f in index.html config.json; do
+            aws s3 cp "frontend/dist/$f" "s3://$BUCKET/$f" --cache-control "no-cache"
+          done
+          aws cloudfront create-invalidation --distribution-id "$DIST" --paths /index.html /config.json > /dev/null
+
+      - name: Smoke tests (site up, anonymous callers refused, CORS, buckets private)
+        run: python scripts/smoke_test.py infra/outputs.json
+
+      - name: Live test (upload the sample PDF, ask 3 questions, fail if any answer is wrong)
+        env:
+          DEMO_USER_EMAIL: ${{ vars.DEMO_USER_EMAIL }}
+          DEMO_USER_PASSWORD: ${{ secrets.DEMO_USER_PASSWORD }} # optional: a login for you during the demo
+        run: python scripts/demo_e2e.py infra/outputs.json --questions q04 q11 u01
+
+      - name: Print the demo URL
+        env:
+          MINUTES: ${{ inputs.minutes }}
+          DEMO_USER_EMAIL: ${{ vars.DEMO_USER_EMAIL }}
+          HAS_DEMO_PASSWORD: ${{ secrets.DEMO_USER_PASSWORD != '' }}
+        run: |
+          url=$(jq -r '.frontend_url.value' infra/outputs.json)
+          api=$(jq -r '.api_url.value' infra/outputs.json)
+          until_ts=$(date -u -d "+$((10#$MINUTES)) minutes" +%H:%M)
+          {
+            echo "### Demo is live"
+            echo ""
+            echo "- **Demo URL:** $url"
+            echo "- API: $api"
+            echo "- Stays up for $((10#$MINUTES)) minutes (until about $until_ts UTC), then it is destroyed."
+            if [ "$HAS_DEMO_PASSWORD" = "true" ] && [ -n "$DEMO_USER_EMAIL" ]; then
+              echo "- Sign in as \`$DEMO_USER_EMAIL\` with the password you stored in the DEMO_USER_PASSWORD secret."
+            else
+              echo "- No demo login was configured (set repo variable DEMO_USER_EMAIL and secret DEMO_USER_PASSWORD to get one)."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Demo URL::$url (up for $((10#$MINUTES)) min, until about $until_ts UTC)"
+          echo "DEMO URL: $url"
+
+      - name: Keep the demo up
+        env:
+          MINUTES: ${{ inputs.minutes }}
+        run: |
+          total=$((10#$MINUTES))
+          for ((left = total; left > 0; left--)); do
+            if (( left % 5 == 0 || left == total )); then echo "$left minute(s) left"; fi
+            sleep 60
+          done
+          echo "Time is up: destroying the demo."
+
+  destroy:
+    name: Destroy (always)
+    needs: [validate, demo]
+    # Runs after success, failure, timeout or cancellation of the demo job, but not if the demo
+    # never started (then nothing was created).
+    if: ${{ always() && needs.validate.result == 'success' && needs.demo.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment:
+      name: demo
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/destroy-demo
+        with:
+          role-arn: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          region: ${{ vars.AWS_REGION }}
+          state-bucket: ${{ vars.TF_STATE_BUCKET }}
+          permissions-boundary-arn: ${{ vars.PERMISSIONS_BOUNDARY_ARN }}
+          generation-model-id: ${{ vars.GENERATION_MODEL_ID }}
+          generation-model-arns: ${{ vars.GENERATION_MODEL_ARNS }}
