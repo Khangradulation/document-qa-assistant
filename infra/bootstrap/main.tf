@@ -375,8 +375,12 @@ data "aws_iam_policy_document" "deploy" {
     resources = ["arn:aws:logs:${var.region}:${local.account_id}:log-group:/aws/lambda/${local.prefix}-*", "arn:aws:logs:${var.region}:${local.account_id}:log-group:/aws/lambda/${local.prefix}-*:*", "arn:aws:logs:${var.region}:${local.account_id}:log-group:/aws/apigateway/${local.prefix}-*", "arn:aws:logs:${var.region}:${local.account_id}:log-group:/aws/apigateway/${local.prefix}-*:*"]
   }
   statement {
-    sid       = "LogDeliveryForApiAccessLogs" # API Gateway access logging requires these on "*"
-    actions   = ["logs:CreateLogDelivery", "logs:PutResourcePolicy", "logs:DescribeResourcePolicies", "logs:DescribeLogGroups"]
+    sid = "LogDeliveryForApiAccessLogs" # API Gateway access logging requires these on "*"
+    actions = [
+      "logs:CreateLogDelivery", "logs:GetLogDelivery", "logs:UpdateLogDelivery", "logs:DeleteLogDelivery",
+      "logs:ListLogDeliveries", # API Gateway needs all five to create AND remove its access-log delivery
+      "logs:PutResourcePolicy", "logs:DescribeResourcePolicies", "logs:DescribeLogGroups",
+    ]
     resources = ["*"]
   }
   statement {
