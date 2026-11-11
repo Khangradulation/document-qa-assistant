@@ -139,10 +139,10 @@ jobs:
           done
           aws cloudfront create-invalidation --distribution-id "$DIST" --paths /index.html /config.json > /dev/null
 
-      - name: Smoke tests (site up, anonymous callers refused, CORS, buckets private)
+      - name: Smoke tests (site up, API open without login, CORS, buckets private)
         run: python scripts/smoke_test.py infra/outputs.json
 
-      - name: Live test (no login: upload the sample PDF, ask 3 questions, fail if any is wrong)
+      - name: Live test (no login, upload the sample PDF, ask 3 questions, fail if any is wrong)
         run: python scripts/demo_e2e.py infra/outputs.json --questions q04 q11 u01
 
       - name: Print the demo URL
