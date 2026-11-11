@@ -185,8 +185,10 @@ def test_real_aws_passes_secrets_via_a_private_temp_file_that_is_removed(
         "i = sys.argv.index('--cli-input-json')\n"
         "path = sys.argv[i + 1].removeprefix('file://')\n"
         "mode = stat.S_IMODE(os.stat(path).st_mode)\n"
-        f"open({str(log)!r}, 'w').write(json.dumps({{'argv': sys.argv[1:], 'body': json.load(open(path)), "
-        "'mode': mode, 'path': path}))\n"
+        f"out = open({str(log)!r}, 'w')\n"
+        "json.dump({'argv': sys.argv[1:], 'body': json.load(open(path)),\n"
+        "           'mode': mode, 'path': path}, out)\n"
+        "out.close()\n"
         "print('ok')\n"
     )
     stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
