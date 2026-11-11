@@ -73,7 +73,7 @@ class World:
     ) -> tuple[int, dict[str, Any]]:
         if url.endswith("/documents/upload-url"):
             assert headers["Authorization"] == "Bearer tok.en.value"
-            return 200, {"document_id": "d1", "upload_url": "https://s3.example/put", "headers": {}}
+            return 201, {"document_id": "d1", "upload_url": "https://s3.example/put", "headers": {}}
         if method == "PUT":
             return 200, {}
         if url.endswith("/documents"):
@@ -216,3 +216,34 @@ def test_real_aws_raises_with_the_cli_error_text(
     monkeypatch.setenv("PATH", f"{stub.parent}{os.pathsep}{os.environ['PATH']}")
     with pytest.raises(RuntimeError, match="boom"):
         demo_e2e.real_aws(["cognito-idp", "admin-create-user"], None)
+
+
+def test_failures_never_log_response_bodies_or_signed_urls(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    signed_url = "https://bucket.s3.amazonaws.com/x.pdf?X-Amz-Signature=deadbeef"
+
+    class Failing(World):
+        def http(
+            self, method: str, url: str, headers: dict[str, str], body: bytes | None
+        ) -> tuple[int, dict[str, Any]]:
+            if url.endswith("/documents/upload-url"):
+                return 500, {"upload_url": signed_url, "error": {"code": "BOOM", "message": "bad"}}
+            return super().http(method, url, headers, body)
+
+    world = Failing(["READY"], {})
+    assert run_world(world, ["q04"]) == 1
+    out = capsys.readouterr().out
+    assert "BOOM: bad" in out and "deadbeef" not in out and signed_url not in out
+
+
+def test_listing_error_fails_fast_instead_of_waiting_for_the_timeout() -> None:
+    class NoListing(World):
+        def http(
+            self, method: str, url: str, headers: dict[str, str], body: bytes | None
+        ) -> tuple[int, dict[str, Any]]:
+            if url.endswith("/documents") and method == "GET":
+                return 401, {"error": {"code": "UNAUTHORIZED", "message": "no"}}
+            return super().http(method, url, headers, body)
+
+    assert run_world(NoListing(["READY"], {}), ["q04"]) == 1

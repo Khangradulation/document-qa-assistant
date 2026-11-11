@@ -65,6 +65,15 @@ def evaluate_answer(q: dict[str, Any], resp: dict[str, Any]) -> list[str]:
     return problems
 
 
+def describe(body: dict[str, Any]) -> str:
+    """Safe-to-log summary of an API response: only the error code/message, never the body
+    (a successful upload-url response contains a signed URL)."""
+    err = body.get("error")
+    if isinstance(err, dict):
+        return f"{err.get('code')}: {err.get('message')}"
+    return "(no error detail)"
+
+
 def real_http(
     method: str, url: str, headers: dict[str, str], body: bytes | None
 ) -> tuple[int, dict[str, Any]]:
@@ -191,8 +200,8 @@ def run(
     status, target = call(http, token, "POST", f"{api}/documents/upload-url", {
         "filename": PDF.name, "content_type": "application/pdf",
     })  # fmt: skip
-    if status != 200:
-        print(f"FAIL upload-url -> {status} {target}")
+    if status not in (200, 201):  # the API answers 201 Created
+        print(f"FAIL upload-url -> {status} {describe(target)}")
         return 1
     status, _ = http("PUT", target["upload_url"], dict(target["headers"]), PDF.read_bytes())
     if status not in (200, 201):
@@ -205,6 +214,9 @@ def run(
     state = "UPLOADED"
     while time.monotonic() < deadline:
         status, listing = call(http, token, "GET", f"{api}/documents")
+        if status != 200:
+            print(f"FAIL listing documents -> {status} {describe(listing)}")
+            return 1
         mine = [d for d in listing.get("documents", []) if d.get("document_id") == doc_id]
         state = mine[0]["status"] if mine else "MISSING"
         if state == "READY":
@@ -227,7 +239,9 @@ def run(
         status, resp = call(http, token, "POST", f"{api}/query", {
             "document_id": doc_id, "question": q["question"],
         })  # fmt: skip
-        problems = [f"HTTP {status}: {resp}"] if status != 200 else evaluate_answer(q, resp)
+        problems = (
+            [f"HTTP {status}: {describe(resp)}"] if status != 200 else evaluate_answer(q, resp)
+        )
         verdict = "PASS" if not problems else "FAIL"
         print(f"{verdict} {q['id']}: {q['question']}")
         print(f"     answer: {resp.get('answer')!r}")
