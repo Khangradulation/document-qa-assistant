@@ -247,3 +247,24 @@ def test_listing_error_fails_fast_instead_of_waiting_for_the_timeout() -> None:
             return super().http(method, url, headers, body)
 
     assert run_world(NoListing(["READY"], {}), ["q04"]) == 1
+
+
+def test_no_login_stack_is_tested_without_any_cognito_calls_or_tokens() -> None:
+    ids = ["q04"]
+    seen_headers: list[dict[str, str]] = []
+
+    class Open(World):
+        def http(
+            self, method: str, url: str, headers: dict[str, str], body: bytes | None
+        ) -> tuple[int, dict[str, Any]]:
+            seen_headers.append(dict(headers))
+            if url.endswith("/documents/upload-url"):
+                put_url = "https://s3.example/put"
+                return 201, {"document_id": "d1", "upload_url": put_url, "headers": {}}
+            return super().http(method, url, headers, body)
+
+    world = Open(["READY"], answers_for(ids))
+    outputs = {**OUTPUTS, "demo_mode": {"value": True}}
+    assert demo_e2e.run(outputs, ids, aws=world.aws, http=world.http, sleep=lambda _s: None) == 0
+    assert world.aws_calls == []  # no user created, no sign-in
+    assert all("Authorization" not in h for h in seen_headers)

@@ -44,12 +44,14 @@ resource "aws_apigatewayv2_integration" "fn" {
 }
 
 resource "aws_apigatewayv2_route" "r" {
-  for_each           = local.routes
-  api_id             = aws_apigatewayv2_api.http.id
-  route_key          = each.key
-  target             = "integrations/${aws_apigatewayv2_integration.fn[each.value].id}"
-  authorization_type = "JWT"
-  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  for_each  = local.routes
+  api_id    = aws_apigatewayv2_api.http.id
+  route_key = each.key
+  target    = "integrations/${aws_apigatewayv2_integration.fn[each.value].id}"
+  # demo_mode: no login (the Lambdas then use one shared owner and the API is throttled hard).
+  authorization_type = var.demo_mode ? "NONE" : "JWT"
+  authorizer_id      = var.demo_mode ? null : aws_apigatewayv2_authorizer.cognito.id
+  #checkov:skip=CKV_AWS_309:Authorization is NONE only when demo_mode=true (short-lived public demo); JWT otherwise.
 }
 
 resource "aws_lambda_permission" "apigw" {
@@ -75,8 +77,8 @@ resource "aws_apigatewayv2_stage" "default" {
 
   # Whole-API throttle: protects the Bedrock bill from abuse or runaway clients.
   default_route_settings {
-    throttling_rate_limit  = var.api_throttle_rate
-    throttling_burst_limit = var.api_throttle_burst
+    throttling_rate_limit  = var.demo_mode ? var.demo_throttle_rate : var.api_throttle_rate
+    throttling_burst_limit = var.demo_mode ? var.demo_throttle_burst : var.api_throttle_burst
   }
 
   access_log_settings {

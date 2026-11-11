@@ -123,6 +123,24 @@ variable "enable_test_auth" {
   default     = false
 }
 
+variable "demo_mode" {
+  type        = bool
+  description = "Public, no-login demo: API routes need no Cognito token, every caller shares ONE workspace, and the API is throttled hard. For short-lived demo stacks only. Keep false for real use."
+  default     = false
+}
+
+variable "demo_throttle_rate" {
+  type        = number
+  description = "Requests/second cap for the whole API when demo_mode is true (safety cap for an open API)."
+  default     = 5
+}
+
+variable "demo_throttle_burst" {
+  type        = number
+  description = "Burst cap when demo_mode is true."
+  default     = 10
+}
+
 variable "force_destroy" {
   type        = bool
   description = "Allow terraform destroy to delete non-empty buckets (and their documents). Keep false except for dev teardown."

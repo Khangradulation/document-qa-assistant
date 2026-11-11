@@ -46,7 +46,7 @@ runs:
         TF_VAR_generation_model_arns: ${{ inputs.generation-model-arns }}
         TF_VAR_permissions_boundary_arn: ${{ inputs.permissions-boundary-arn }}
         TF_VAR_force_destroy: "true"
-        TF_VAR_enable_test_auth: "true"
+        TF_VAR_demo_mode: "true"
         STATE_BUCKET: ${{ inputs.state-bucket }}
         REGION: ${{ inputs.region }}
       run: |

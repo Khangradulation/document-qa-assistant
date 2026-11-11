@@ -12,14 +12,14 @@ export class ApiError extends Error {
 }
 
 /** Real client. The bearer token is the Cognito JWT; no AWS credentials ever reach the browser. */
-export function createApi(baseUrl: string, getToken: () => Promise<string>): Api {
+export function createApi(baseUrl: string, getToken: (() => Promise<string>) | null): Api {
   async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
     let res: Response;
     try {
       res = await fetch(`${baseUrl.replace(/\/$/, "")}${path}`, {
         method,
         headers: {
-          Authorization: `Bearer ${await getToken()}`,
+          ...(getToken ? { Authorization: `Bearer ${await getToken()}` } : {}),
           ...(body ? { "Content-Type": "application/json" } : {}),
         },
         body: body ? JSON.stringify(body) : undefined,

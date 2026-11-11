@@ -21,6 +21,7 @@ class Deployment:
 
     def __init__(self, **over):
         self.config = GOOD_CONFIG
+        self.demo_mode = False
         self.anon_status = 401
         self.reflect_any_origin = False
         self.bucket_status = 403
@@ -30,6 +31,7 @@ class Deployment:
             "x-content-type-options": "nosniff",
         }
         self.authed_status = 200
+        self.open_status = 200  # what an anonymous GET /documents gets on a demo_mode stack
         self.__dict__.update(over)
 
     def __call__(self, method, url, headers):
@@ -45,6 +47,8 @@ class Deployment:
             return 204, ({"access-control-allow-origin": origin} if ok else {}), b""
         if headers.get("Authorization"):
             return self.authed_status, {}, b'{"documents": []}'
+        if self.demo_mode:
+            return self.open_status, {}, b'{"documents": []}'
         return self.anon_status, {}, b"{}"
 
 
@@ -106,3 +110,31 @@ def test_retries_give_up_and_report_failure():
 
 def test_evil_origin_constant_is_not_ours():
     assert EVIL_ORIGIN != SITE
+
+
+# ---- demo_mode stacks have no login by design -------------------------------------------
+DEMO_OUT = {**OUT, "demo_mode": True}
+DEMO_CONFIG = {"demo": False, "noAuth": True, "apiUrl": API}
+
+
+def demo_failures(**over):
+    dep = Deployment(**{"demo_mode": True, "config": DEMO_CONFIG, **over})
+    return [r.name for r in run_checks(DEMO_OUT, dep) if not r.ok]
+
+
+def test_demo_mode_stack_passes_when_the_api_is_open_and_config_has_no_auth():
+    assert demo_failures() == []
+
+
+def test_demo_mode_stack_fails_if_the_api_still_demands_a_login():
+    assert demo_failures(open_status=401) == ["API works without a login (demo_mode)"]
+
+
+def test_demo_mode_stack_fails_if_the_frontend_would_still_ask_for_a_login():
+    assert demo_failures(config={"demo": False, "apiUrl": API}) == [
+        "frontend config targets the real backend"
+    ]
+
+
+def test_normal_stack_still_must_refuse_anonymous_callers():
+    assert "API rejects anonymous requests" in failures(anon_status=200)

@@ -52,6 +52,7 @@ def run_checks(out: dict[str, Any], fetch: Fetch, token: str | None = None) -> l
     api = out["api_url"].rstrip("/")
     site = out["frontend_url"].rstrip("/")
     results: list[Result] = []
+    no_login = out.get("demo_mode") is True  # a demo_mode stack has no login by design
 
     def check(name: str, fn: Callable[[], str | None]) -> None:
         """fn returns None on success or a failure message."""
@@ -74,11 +75,15 @@ def run_checks(out: dict[str, Any], fetch: Fetch, token: str | None = None) -> l
         cfg = json.loads(body)
         if cfg.get("demo"):
             return "config.json still has demo=true"
-        want = {
-            "apiUrl": api,
-            "userPoolId": out["cognito_user_pool_id"],
-            "clientId": out["cognito_client_id"],
-        }
+        want = {"apiUrl": api}
+        if no_login:
+            if cfg.get("noAuth") is not True:
+                return "demo_mode stack, but config.json does not have noAuth=true"
+        else:
+            want |= {
+                "userPoolId": out["cognito_user_pool_id"],
+                "clientId": out["cognito_client_id"],
+            }
         wrong = [k for k, v in want.items() if str(cfg.get(k, "")).rstrip("/") != v]
         return f"config.json mismatch: {wrong}" if wrong else None
 
@@ -88,6 +93,12 @@ def run_checks(out: dict[str, Any], fetch: Fetch, token: str | None = None) -> l
             h for h in ("strict-transport-security", "x-content-type-options") if h not in headers
         ]
         return f"missing headers: {missing}" if missing else None
+
+    def api_is_open_in_demo_mode() -> str | None:
+        status, _, body = fetch("GET", f"{api}/documents", {})
+        if status != 200:
+            return f"GET /documents without a token returned {status} (expected 200 in demo_mode)"
+        return None if "documents" in json.loads(body) else "response has no 'documents'"
 
     def api_requires_auth() -> str | None:
         for method, path in (("GET", "/documents"), ("POST", "/query")):
@@ -126,7 +137,10 @@ def run_checks(out: dict[str, Any], fetch: Fetch, token: str | None = None) -> l
     check("frontend serves the app", frontend_serves_app)
     check("frontend config targets the real backend", frontend_config_is_live)
     check("frontend security headers present", frontend_security_headers)
-    check("API rejects anonymous requests", api_requires_auth)
+    if no_login:
+        check("API works without a login (demo_mode)", api_is_open_in_demo_mode)
+    else:
+        check("API rejects anonymous requests", api_requires_auth)
     check("CORS allows only our frontend", cors_only_for_frontend)
     check("buckets are not publicly readable", buckets_not_public)
 

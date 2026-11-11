@@ -46,3 +46,7 @@ output "region" {
 output "lambda_functions" {
   value = { for k, f in aws_lambda_function.fn : k => f.function_name }
 }
+
+output "demo_mode" {
+  value = var.demo_mode
+}

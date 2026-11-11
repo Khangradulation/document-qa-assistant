@@ -17,6 +17,18 @@ async function boot(): Promise<Boot> {
     if (!res.ok) throw new Error(`config.json: ${res.status}`);
     const config = (await res.json()) as AppConfig;
     if (config.demo) return { phase: "ready", config, ...createDemo() };
+    if (config.noAuth) {
+      if (!config.apiUrl) throw new Error("config.json is incomplete");
+      // Public demo stack: no sign-in, everyone shares one workspace.
+      const open: Auth = {
+        email: () => null,
+        restore: async () => true,
+        signIn: async () => ({ status: "ok" }),
+        completeNewPassword: async () => undefined,
+        signOut: () => undefined,
+      };
+      return { phase: "ready", config, auth: open, api: createApi(config.apiUrl, null) };
+    }
     if (!config.apiUrl || !config.userPoolId || !config.clientId) throw new Error("config.json is incomplete");
     const auth = createAuth(config.userPoolId, config.clientId);
     return { phase: "ready", config, auth, api: createApi(config.apiUrl, auth.getToken) };
@@ -40,7 +52,7 @@ export function App() {
     <>
       <header className="top">
         <h1>Document Q&amp;A Assistant</h1>
-        {state.phase === "ready" && signedIn && (
+        {state.phase === "ready" && signedIn && !state.config.noAuth && (
           <div className="row">
             <span className="muted small">{state.auth.email()}</span>
             <button type="button" className="secondary" onClick={() => { state.auth.signOut(); setSignedIn(false); }}>Sign out</button>
@@ -49,6 +61,9 @@ export function App() {
       </header>
       {state.phase === "ready" && state.config.demo && (
         <p className="banner" role="note">Demo mode: sample data in your browser only. No AWS, no real AI. Set <code>demo</code> to false in <code>config.json</code> for the real app.</p>
+      )}
+      {state.phase === "ready" && state.config.noAuth && (
+        <p className="banner" role="note">Public demo: no sign-in, and everyone shares one workspace, so do not upload anything private. This demo is deleted automatically when its timer ends.</p>
       )}
       <main>
         {state.phase === "loading" && <p role="status">Loading…</p>}

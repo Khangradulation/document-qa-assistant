@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 from collections.abc import Callable
 from typing import Any
@@ -28,9 +29,23 @@ class ApiError(Exception):
         self.message = message
 
 
+DEMO_OWNER = "demo-shared"  # the single shared workspace of a no-login demo stack
+
+
+def demo_mode() -> bool:
+    """True only on a stack deployed with demo_mode=true (Terraform sets DEMO_MODE on it)."""
+    return os.environ.get("DEMO_MODE", "").lower() == "true"
+
+
 def owner_from_event(event: dict[str, Any]) -> str:
     """The owner is the Cognito `sub` claim that API Gateway has ALREADY verified
-    (signature, expiry, audience). The client cannot choose or forge it."""
+    (signature, expiry, audience). The client cannot choose or forge it.
+
+    Exception: a demo_mode stack has no login, so every caller shares DEMO_OWNER. That is only
+    reachable when the Lambda was deployed with DEMO_MODE=true; without it, a request that
+    carries no verified identity is refused as before."""
+    if demo_mode():
+        return DEMO_OWNER
     try:
         sub = event["requestContext"]["authorizer"]["jwt"]["claims"]["sub"]
     except (KeyError, TypeError) as exc:

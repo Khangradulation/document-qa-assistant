@@ -162,7 +162,7 @@ def call(
     body: dict[str, Any] | None = None,
     tries: int = 4,
 ) -> tuple[int, dict[str, Any]]:
-    headers = {"Authorization": f"Bearer {token}"}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     data = None
     if body is not None:
         headers["Content-Type"] = "application/json"
@@ -191,8 +191,13 @@ def run(
     password = make_password()
     print(f"::add-mask::{password}")
     email = f"smoke-{secrets.token_hex(4)}@example.com"
-    create_user(aws, pool, email, password)
-    token = sign_in(aws, pool, client, email, password)
+    no_login = outputs.get("demo_mode", {}).get("value") is True
+    if no_login:
+        token = ""  # demo_mode stack: the API takes no token, exactly like the public demo
+        print("demo_mode stack: calling the API without signing in")
+    else:
+        create_user(aws, pool, email, password)
+        token = sign_in(aws, pool, client, email, password)
 
     all_questions = {q["id"]: q for q in json.loads(QUESTIONS.read_text())}
     questions = [all_questions[i] for i in question_ids]
@@ -255,7 +260,7 @@ def run(
         os.environ.get("DEMO_USER_EMAIL"),
         os.environ.get("DEMO_USER_PASSWORD"),
     )
-    if demo_email and demo_password:
+    if demo_email and demo_password and not no_login:
         create_user(aws, pool, demo_email, demo_password)  # the password is a masked secret
         print(f"demo user created: {demo_email}")
 

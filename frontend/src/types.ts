@@ -35,6 +35,8 @@ export interface UploadTarget {
 
 export interface AppConfig {
   demo?: boolean;
+  /** Public no-login demo stack (Terraform demo_mode): no Cognito, no Authorization header. */
+  noAuth?: boolean;
   apiUrl: string;
   region: string;
   userPoolId: string;

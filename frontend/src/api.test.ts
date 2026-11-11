@@ -16,6 +16,13 @@ describe("createApi", () => {
     expect(JSON.parse(init.body)).toEqual({ document_id: "d".repeat(32), question: "hi" });
   });
 
+  it("sends no Authorization header on a no-login demo stack", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(json(200, { documents: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    await createApi("https://api.example", null).listDocuments();
+    expect(fetchMock.mock.calls[0][1].headers.Authorization).toBeUndefined();
+  });
+
   it("turns the backend error shape into an ApiError with a request id", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(json(409, { error: { code: "DOCUMENT_NOT_READY", message: "Document is PROCESSING, not READY" }, request_id: "rid" })));
     const err = await createApi("https://x", async () => "t").query("d".repeat(32), "q").catch((e) => e);

@@ -84,7 +84,7 @@ jobs:
       TF_VAR_generation_model_arns: ${{ vars.GENERATION_MODEL_ARNS }}
       TF_VAR_permissions_boundary_arn: ${{ vars.PERMISSIONS_BOUNDARY_ARN }}
       TF_VAR_force_destroy: "true" # so destroy can empty the buckets
-      TF_VAR_enable_test_auth: "true" # lets the smoke test sign in with the AWS-credentialed admin flow
+      TF_VAR_demo_mode: "true" # public no-login demo: shared workspace, API throttled to 5 req/s (burst 10)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -126,8 +126,7 @@ jobs:
         env:
           REGION: ${{ vars.AWS_REGION }}
         run: |
-          jq --arg region "$REGION" '{demo: false, apiUrl: .api_url.value, region: $region,
-              userPoolId: .cognito_user_pool_id.value, clientId: .cognito_client_id.value}' \
+          jq --arg region "$REGION" '{demo: false, noAuth: true, apiUrl: .api_url.value, region: $region}' \
             infra/outputs.json > frontend/public/config.json
           (cd frontend && npm ci && npm run build)
           BUCKET=$(jq -r '.frontend_bucket.value' infra/outputs.json)
@@ -143,17 +142,12 @@ jobs:
       - name: Smoke tests (site up, anonymous callers refused, CORS, buckets private)
         run: python scripts/smoke_test.py infra/outputs.json
 
-      - name: Live test (upload the sample PDF, ask 3 questions, fail if any answer is wrong)
-        env:
-          DEMO_USER_EMAIL: ${{ vars.DEMO_USER_EMAIL }}
-          DEMO_USER_PASSWORD: ${{ secrets.DEMO_USER_PASSWORD }} # optional: a login for you during the demo
+      - name: Live test (no login: upload the sample PDF, ask 3 questions, fail if any is wrong)
         run: python scripts/demo_e2e.py infra/outputs.json --questions q04 q11 u01
 
       - name: Print the demo URL
         env:
           MINUTES: ${{ inputs.minutes }}
-          DEMO_USER_EMAIL: ${{ vars.DEMO_USER_EMAIL }}
-          HAS_DEMO_PASSWORD: ${{ secrets.DEMO_USER_PASSWORD != '' }}
         run: |
           url=$(jq -r '.frontend_url.value' infra/outputs.json)
           api=$(jq -r '.api_url.value' infra/outputs.json)
@@ -164,11 +158,7 @@ jobs:
             echo "- **Demo URL:** $url"
             echo "- API: $api"
             echo "- Stays up for $((10#$MINUTES)) minutes (until about $until_ts UTC), then it is destroyed."
-            if [ "$HAS_DEMO_PASSWORD" = "true" ] && [ -n "$DEMO_USER_EMAIL" ]; then
-              echo "- Sign in as \`$DEMO_USER_EMAIL\` with the password you stored in the DEMO_USER_PASSWORD secret."
-            else
-              echo "- No demo login was configured (set repo variable DEMO_USER_EMAIL and secret DEMO_USER_PASSWORD to get one)."
-            fi
+            echo "- **No login needed.** Anyone with the link can use it, everyone shares one workspace (do not upload anything private), and the API is capped at 5 requests/second."
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::notice title=Demo URL::$url (up for $((10#$MINUTES)) min, until about $until_ts UTC)"
           echo "DEMO URL: $url"

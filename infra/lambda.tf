@@ -208,7 +208,8 @@ resource "aws_lambda_function" "fn" {
   environment {
     variables = merge(
       local.common_env,
-      each.key == "docs" ? { INGEST_FUNCTION_NAME = "${local.prefix}-ingest" } : {}
+      each.key == "docs" ? { INGEST_FUNCTION_NAME = "${local.prefix}-ingest" } : {},
+      var.demo_mode ? { DEMO_MODE = "true" } : {}
     )
   }
 

@@ -412,3 +412,30 @@ def test_invalid_base64_body_is_a_400_not_a_500(world: World):
     ev["isBase64Encoded"] = True
     status, body = call(world, query_api, ev)
     assert status == 400 and body["error"]["code"] == "INVALID_JSON"
+
+
+# ---- demo_mode (public, no-login demo stack) ---------------------------------
+def test_demo_mode_shares_one_workspace_without_a_login(
+    world: World, monkeypatch: pytest.MonkeyPatch
+):
+    from docqa.http import DEMO_OWNER
+
+    monkeypatch.setenv("DEMO_MODE", "true")
+    doc = upload(world, owner=DEMO_OWNER)
+    # No authorizer claims at all (API Gateway has no JWT authorizer on a demo_mode stack).
+    status, resp = call(world, docs_api, api("GET /documents", owner=None))
+    assert status == 200 and [d["document_id"] for d in resp["documents"]] == [doc]
+    # A token claiming another identity cannot reach anything else: everyone is the demo owner.
+    status, resp = call(world, docs_api, api("GET /documents", owner="someone-else"))
+    assert [d["document_id"] for d in resp["documents"]] == [doc]
+
+
+def test_without_demo_mode_a_missing_identity_is_still_refused(
+    world: World, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.delenv("DEMO_MODE", raising=False)
+    status, resp = call(world, query_api, api("POST /query", owner=None, body={}))
+    assert status == 401 and resp["error"]["code"] == "UNAUTHENTICATED"
+    monkeypatch.setenv("DEMO_MODE", "false")  # only the exact value "true" turns it on
+    status, _ = call(world, docs_api, api("GET /documents", owner=None))
+    assert status == 401
