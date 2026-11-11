@@ -21,6 +21,7 @@ import os
 import secrets
 import subprocess  # noqa: S404 (runs the AWS CLI with fixed arguments)
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -82,17 +83,23 @@ def real_http(
 
 
 def real_aws(args: list[str], stdin_json: dict[str, Any] | None = None) -> str:
-    """Run `aws <args>`. Secrets go in via stdin JSON so they never show in a process list."""
+    """Run `aws <args>`. Secrets go in a private (0600) temp file that is deleted right away, so
+    they never appear in a process list. (`--cli-input-json file:///dev/stdin` was rejected by the
+    CLI on GitHub runners, so a real file is used.)"""
     cmd = ["aws", *args]
-    if stdin_json is not None:
-        cmd += ["--cli-input-json", "file:///dev/stdin"]
-    done = subprocess.run(  # noqa: S603 (fixed argv, no shell)
-        cmd,
-        input=json.dumps(stdin_json) if stdin_json is not None else None,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    path: str | None = None
+    try:
+        if stdin_json is not None:
+            fd, path = tempfile.mkstemp(prefix="demo-e2e-", suffix=".json")  # mode 0600
+            with os.fdopen(fd, "w") as fh:
+                json.dump(stdin_json, fh)
+            cmd += ["--cli-input-json", f"file://{path}"]
+        done = subprocess.run(  # noqa: S603 (fixed argv, no shell)
+            cmd, capture_output=True, text=True, check=False
+        )
+    finally:
+        if path is not None:
+            Path(path).unlink(missing_ok=True)
     if done.returncode != 0:
         # stderr from the CLI does not echo request bodies, but keep it short anyway.
         raise RuntimeError(f"aws {args[1]} failed: {done.stderr.strip()[:300]}")

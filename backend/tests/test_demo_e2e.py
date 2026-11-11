@@ -167,3 +167,50 @@ def test_demo_user_is_created_only_when_both_env_vars_are_set(
     run_world(w2, ids)
     created_with = [c for c in w2.aws_calls if c[0][1] == "admin-create-user"]
     assert len(created_without) == 1 and len(created_with) == 2
+
+
+# ---- real_aws against a stub `aws` executable (the layer the fake-based tests skip) ----------
+def test_real_aws_passes_secrets_via_a_private_temp_file_that_is_removed(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+    import stat
+
+    log = tmp_path / "seen.json"
+    stub = tmp_path / "bin" / "aws"
+    stub.parent.mkdir()
+    stub.write_text(
+        "#!/usr/bin/env python3\n"
+        "import json, os, stat, sys\n"
+        "i = sys.argv.index('--cli-input-json')\n"
+        "path = sys.argv[i + 1].removeprefix('file://')\n"
+        "mode = stat.S_IMODE(os.stat(path).st_mode)\n"
+        f"open({str(log)!r}, 'w').write(json.dumps({{'argv': sys.argv[1:], 'body': json.load(open(path)), "
+        "'mode': mode, 'path': path}))\n"
+        "print('ok')\n"
+    )
+    stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+    monkeypatch.setenv("PATH", f"{stub.parent}{os.pathsep}{os.environ['PATH']}")
+
+    out = demo_e2e.real_aws(["cognito-idp", "admin-set-user-password"], {"Password": "s3cret!"})
+
+    seen = json.loads(log.read_text())
+    assert out.strip() == "ok" and seen["body"] == {"Password": "s3cret!"}
+    assert seen["mode"] == 0o600  # readable by the owner only
+    assert "s3cret!" not in " ".join(seen["argv"])  # never on the command line
+    assert not os.path.exists(seen["path"])  # deleted after the call
+
+
+def test_real_aws_raises_with_the_cli_error_text(
+    tmp_path: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+    import stat
+
+    stub = tmp_path / "bin" / "aws"
+    stub.parent.mkdir()
+    stub.write_text("#!/bin/sh\necho 'boom' >&2\nexit 3\n")
+    stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+    monkeypatch.setenv("PATH", f"{stub.parent}{os.pathsep}{os.environ['PATH']}")
+    with pytest.raises(RuntimeError, match="boom"):
+        demo_e2e.real_aws(["cognito-idp", "admin-create-user"], None)
